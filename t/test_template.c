@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "io.h"
 #include "template.h"
 #include "tap.h"
 
