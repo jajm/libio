@@ -2,15 +2,13 @@ include ../package.mk
 include ../config.mk
 
 CFLAGS := -Wall -Wextra -Werror -g -std=c99 $(CFLAGS)
-CPPFLAGS := -I../include $(shell pkg-config --cflags lua5.2 libgends) $(CPPFLAGS)
-LDFLAGS := $(shell pkg-config --libs lua5.2 libgends) $(LDFLAGS)
+CPPFLAGS := -I../include -I/usr/local/include $(shell pkg-config --cflags lua5.2 libgends) $(CPPFLAGS)
+LDFLAGS := $(shell pkg-config --libs lua5.2 libgends) -lobject $(LDFLAGS)
 LIBTOOL_VERSION := $(LIBTOOL_CURRENT):$(LIBTOOL_REVISION):$(LIBTOOL_AGE)
 
-C_SOURCES := $(filter-out %.lua.c, $(wildcard *.c))
-LUA_SOURCES := $(wildcard *.lua)
-LUA_OBJS := $(LUA_SOURCES:.lua=.lua.lo)
+C_SOURCES := $(wildcard *.c)
 C_OBJS := $(C_SOURCES:.c=.lo)
-OBJS := $(C_OBJS) $(LUA_OBJS)
+OBJS := $(C_OBJS)
 
 all: $(LIBRARY_NAME)
 
@@ -29,17 +27,9 @@ $(LIBRARY_NAME): $(OBJS)
 %.lo: %.c
 	$(LIBTOOL) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
 
-# Cancel implicit rules, otherwise make tries to create %.lua
-# from %.lua.c or %.lua.o, when one of those exists
-%: %.o
-%: %.c
-
-%.lua.c %.lua.h: %.lua
-	lua ../tools/lua2c.lua -o $< -f lua2c_do_$< $<
-
 install: $(LIBRARY_NAME)
 	$(LIBTOOL) --mode=install $(INSTALL) $< $(LIBDIR)
 
 clean:
-	rm -rf *.o *.lo *.lua.c *.lua.h $(LIBRARY_NAME)
+	rm -rf *.o *.lo $(LIBRARY_NAME)
 	rm -rf .deps .libs

@@ -17,12 +17,10 @@
  * along with libio.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef libio_slt2_h_included
-#define libio_slt2_h_included
+#ifndef libio_iolib_h_included
+#define libio_iolib_h_included
 
-#include <lua.h>
+int io_require_io(lua_State *L);
 
-int io_require_slt2(lua_State *L);
-
-#endif /* ! libio_slt2_h_included */
+#endif /* ! libio_iolib_h_included */
 

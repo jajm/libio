@@ -24,9 +24,11 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
-#include "slt2.h"
+#include <object/string.h>
+#include "iolib.h"
 #include "value.h"
 #include "table_iterator.h"
+#include "compiler.h"
 #include "template.h"
 
 struct io_template_s {
@@ -139,36 +141,47 @@ char * io_template_render(io_template_t *T)
 {
 	char *out = NULL;
 	lua_State *L;
-	static const char *lua_code_filename =
-		"local tmpl = slt2.loadfile(data); return slt2.render(tmpl, stash)";
-	static const char *lua_code_template =
-		"local tmpl = slt2.loadstring(data); return slt2.render(tmpl, stash)";
-	const char *lua_code;
+	size_t len;
+	char *lua_code, *lua_name;
+	static const char *lua_main_chunk =
+		"setmetatable(stash, { __index = _ENV })\n"
+		"f = assert(load(code, name, 't', stash))\n"
+		"f()";
 
 	L = luaL_newstate();
 
 	luaL_openlibs(L);
-	io_require_slt2(L);
+	io_require_io(L);
 
-	lua_pushstring(L, T->data);
-	lua_setglobal(L, "data");
+	string_t *output = string("");
+	lua_pushlightuserdata(L, output);
+	lua_setfield(L, LUA_REGISTRYINDEX, "io_output");
 
 	io_value_to_lua_stack(T->stash, L);
 	lua_setglobal(L, "stash");
 
-	lua_code = (T->data_is_a_filename)
-		? lua_code_filename : lua_code_template;
+	if (T->data_is_a_filename) {
+		lua_code = io_compile_file(T->data, "#{", "}#");
+		lua_name = T->data;
+	} else {
+		lua_code = io_compile(T->data, "#{", "}#");
+		lua_name = "=(Io:main)";
+	}
 
-	if(luaL_dostring(L, lua_code) != 0) {
+	lua_pushstring(L, lua_code);
+	lua_setglobal(L, "code");
+	lua_pushstring(L, lua_name);
+	lua_setglobal(L, "name");
+
+	if (luaL_dostring(L, lua_main_chunk) != 0) {
 		fprintf(stderr, "error: %s\n", lua_tostring(L, -1));
 		lua_pop(L, -1);
-	} else {
-		size_t len;
-		const char *tmp;
-		tmp = lua_tolstring(L, -1, &len);
-		out = malloc(sizeof(char) * (len+1));
-		strncpy(out, tmp, len+1);
 	}
+
+	len = string_length(output);
+	out = malloc(sizeof(char) * (len+1));
+	strncpy(out, string_to_c_str(output), len+1);
+	string_free(output);
 
 	lua_close(L);
 

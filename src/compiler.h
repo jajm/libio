@@ -17,22 +17,29 @@
  * along with libio.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <lua.h>
-#include "slt2.lua.h"
+#ifndef libio_compiler_h_included
+#define libio_compiler_h_included
 
-int io_require_slt2(lua_State *L)
-{
-	int ret;
+char *
+io_compile(
+	const char *template,
+	const char *start_tag,
+	const char *end_tag
+);
 
-	ret = lua2c_do_slt2_lua(L);
-	if (!ret) {
-		lua_setglobal(L, "slt2");
-	} else {
-		fprintf(stderr, "Error while loading or executing slt2.lua precompiled chunk: %s\n", lua_tostring(L, -1));
-		lua_pop(L, 1);
-	}
+char *
+io_compile_filep(
+	FILE *filep,
+	const char *start_tag,
+	const char *end_tag
+);
 
-	return ret;
-}
+char *
+io_compile_file(
+	const char *filename,
+	const char *start_tag,
+	const char *end_tag
+);
+
+#endif /* ! libio_compiler_h_included */
+

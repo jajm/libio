@@ -22,6 +22,3 @@ That will produce the following output:
 
     Hello, world
 
-
-Note that libio is only a wrapper around a Lua library that is responsible for
-all the templating stuff, slt2 (https://github.com/henix/slt2)
