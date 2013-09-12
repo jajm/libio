@@ -143,10 +143,6 @@ char * io_template_render(io_template_t *T)
 	lua_State *L;
 	size_t len;
 	char *lua_code, *lua_name;
-	static const char *lua_main_chunk =
-		"setmetatable(stash, { __index = _ENV })\n"
-		"f = assert(load(code, name, 't', stash))\n"
-		"f()";
 
 	L = luaL_newstate();
 
@@ -157,8 +153,6 @@ char * io_template_render(io_template_t *T)
 	lua_pushlightuserdata(L, output);
 	lua_setfield(L, LUA_REGISTRYINDEX, "io_output");
 
-	io_value_to_lua_stack(T->stash, L);
-	lua_setglobal(L, "stash");
 
 	if (T->data_is_a_filename) {
 		lua_code = io_compile_file(T->data, "#{", "}#");
@@ -168,14 +162,24 @@ char * io_template_render(io_template_t *T)
 		lua_name = "=(Io:main)";
 	}
 
-	lua_pushstring(L, lua_code);
-	lua_setglobal(L, "code");
-	lua_pushstring(L, lua_name);
-	lua_setglobal(L, "name");
+	if (luaL_loadbuffer(L, lua_code, strlen(lua_code), lua_name) == LUA_OK) {
+		// stash = ...
+		io_value_to_lua_stack(T->stash, L);
 
-	if (luaL_dostring(L, lua_main_chunk) != 0) {
-		fprintf(stderr, "error: %s\n", lua_tostring(L, -1));
-		lua_pop(L, -1);
+		// stash_mt = { __index = _G }
+		lua_newtable(L);
+		lua_pushinteger(L, LUA_RIDX_GLOBALS);
+		lua_gettable(L, LUA_REGISTRYINDEX);
+		lua_setfield(L, -2, "__index");
+
+		// setmetatable(stash, stash_mt)
+		lua_setmetatable(L, -2);
+
+		// Set environment and call function.
+		lua_setupvalue(L, -2, 1);
+		lua_pcall(L, 0, 0, 0);
+	} else {
+		fprintf(stderr, "Error: %s\n", lua_tostring(L, -1));
 	}
 
 	len = string_length(output);
