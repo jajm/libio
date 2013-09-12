@@ -56,6 +56,7 @@ int io_iolib_include(lua_State *L)
 		} else {
 			fprintf(stderr, "ERROR: %s\n", lua_tostring(L, -1));
 		}
+		free(code);
 	}
 
 	return 0;

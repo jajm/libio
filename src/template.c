@@ -182,6 +182,8 @@ char * io_template_render(io_template_t *T)
 		fprintf(stderr, "Error: %s\n", lua_tostring(L, -1));
 	}
 
+	free(lua_code);
+
 	len = string_length(output);
 	out = malloc(sizeof(char) * (len+1));
 	strncpy(out, string_to_c_str(output), len+1);

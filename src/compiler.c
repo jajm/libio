@@ -81,6 +81,7 @@ char * io_compile(const char *template, const char *start_tag,
 	len = strlen(tmp);
 	out = malloc(sizeof(char) * (len+1));
 	strncpy(out, tmp, len+1);
+	string_free(buf);
 
 	return out;
 }
@@ -113,5 +114,12 @@ char * io_compile_filep(FILE *filep, const char *start_tag, const char *end_tag)
 char * io_compile_file(const char *filename, const char *start_tag,
 	const char *end_tag)
 {
-	return io_compile_filep(fopen(filename, "r"), start_tag, end_tag);
+	FILE *fp;
+	char *out;
+
+	fp = fopen(filename, "r");
+	out = io_compile_filep(fp, start_tag, end_tag);
+	fclose(fp);
+
+	return out;
 }
