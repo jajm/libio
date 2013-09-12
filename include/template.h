@@ -41,7 +41,7 @@ io_template_param(
 	io_value_t *value
 );
 
-char *
+const char *
 io_template_render(
 	io_template_t *T
 );

@@ -5,7 +5,7 @@
 
 int main()
 {
-	char *out;
+	const char *out;
 	static const char *tpl =
 		"Hello, #{= name }# #{\n"
 		"	name2 = string.gsub(name, \"!\", \"?\")\n"
@@ -25,7 +25,6 @@ int main()
 			"Test inclusion WORLD!\n"
 			"\n"
 			"Hello again, WORLD?\n") == 0, "output is ok");
-		free(out);
 		io_template_free(T);
 	}
 

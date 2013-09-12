@@ -35,6 +35,7 @@ struct io_template_s {
 	_Bool data_is_a_filename;
 	char *data;
 	io_value_t *stash;
+	char *last_render;
 };
 
 io_template_t * io_template_new(const char *template)
@@ -62,6 +63,7 @@ io_template_t * io_template_new(const char *template)
 	}
 	strncpy(T->data, template, len+1);
 	T->data_is_a_filename = false;
+	T->last_render = NULL;
 
 	T->stash = io_value_table();
 
@@ -137,9 +139,8 @@ void io_value_to_lua_stack(io_value_t *v, lua_State *L)
 	}
 }
 
-char * io_template_render(io_template_t *T)
+const char * io_template_render(io_template_t *T)
 {
-	char *out = NULL;
 	lua_State *L;
 	size_t len;
 	char *lua_code, *lua_name;
@@ -185,13 +186,14 @@ char * io_template_render(io_template_t *T)
 	free(lua_code);
 
 	len = string_length(output);
-	out = malloc(sizeof(char) * (len+1));
-	strncpy(out, string_to_c_str(output), len+1);
+	free(T->last_render);
+	T->last_render = malloc(sizeof(char) * (len+1));
+	strncpy(T->last_render, string_to_c_str(output), len+1);
 	string_free(output);
 
 	lua_close(L);
 
-	return out;
+	return T->last_render;
 }
 
 void io_template_free(io_template_t *T)
@@ -199,6 +201,7 @@ void io_template_free(io_template_t *T)
 	if (T != NULL) {
 		free(T->data);
 		io_value_free(T->stash);
+		free(T->last_render);
 		free(T);
 	}
 }
