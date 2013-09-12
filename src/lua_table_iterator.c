@@ -22,26 +22,25 @@
 #include <libgends/iterator.h>
 #include <libgends/slist.h>
 #include <libgends/hash_map.h>
-#include "value.h"
-#include "value_private.h"
-#include "table_iterator.h"
+#include "lua_table.h"
+#include "lua_table_iterator.h"
 
-struct io_table_iterator_s {
+struct io_lua_table_iterator_s {
 	gds_iterator_t *it;
 	gds_slist_t *keys;
-	io_value_t *v;
+	const io_lua_table_t *lua_table;
 };
 
-io_table_iterator_t * io_table_iterator(io_value_t *v)
+io_lua_table_iterator_t * io_lua_table_iterator(io_lua_table_t *lua_table)
 {
-	io_table_iterator_t *it;
+	io_lua_table_iterator_t *it;
 
-	if (!io_value_isa(v, IO_VALUE_TABLE)) {
-		fprintf(stderr, "Value v is not a table\n");
+	if (!object_is_lua_table(lua_table)) {
+		fprintf(stderr, "lua_table is not a lua table\n");
 		return NULL;
 	}
 
-	it = malloc(sizeof(io_table_iterator_t));
+	it = malloc(sizeof(io_lua_table_iterator_t));
 	if (it == NULL) {
 		fprintf(stderr, "Memory allocation error\n");
 		return NULL;
@@ -49,14 +48,14 @@ io_table_iterator_t * io_table_iterator(io_value_t *v)
 
 	it->it = NULL;
 	it->keys = NULL;
-	it->v = v;
+	it->lua_table = lua_table;
 
-	io_table_iterator_reset(it);
+	io_lua_table_iterator_reset(it);
 
 	return it;
 }
 
-int io_table_iterator_reset(io_table_iterator_t *it)
+int io_lua_table_iterator_reset(io_lua_table_iterator_t *it)
 {
 	if (it == NULL)
 		return -1;
@@ -64,41 +63,41 @@ int io_table_iterator_reset(io_table_iterator_t *it)
 	gds_iterator_free(it->it);
 	gds_slist_free(it->keys, NULL, NULL);
 
-	it->keys = gds_hash_map_keys(it->v->data.t);
+	it->keys = gds_hash_map_keys(object_value(it->lua_table));
 	it->it = gds_slist_iterator_new(it->keys);
 
 	return 0;
 }
 
-int io_table_iterator_step(io_table_iterator_t *it)
+int io_lua_table_iterator_step(io_lua_table_iterator_t *it)
 {
 	if (it == NULL)
 		return -1;
-	
+
 	return gds_iterator_step(it->it);
 }
 
-io_value_t * io_table_iterator_getkey(io_table_iterator_t *it)
+io_lua_table_t * io_lua_table_iterator_getkey(io_lua_table_iterator_t *it)
 {
 	if (it == NULL)
 		return NULL;
-	
+
 	return gds_iterator_get(it->it);
 }
 
-io_value_t * io_table_iterator_getvalue(io_table_iterator_t *it)
+io_lua_table_t * io_lua_table_iterator_getvalue(io_lua_table_iterator_t *it)
 {
-	io_value_t *k;
+	object_t *k;
 
 	if (it == NULL)
 		return NULL;
-	
+
 	k = gds_iterator_get(it->it);
 
-	return gds_hash_map_get(it->v->data.t, k);
+	return gds_hash_map_get(object_value(it->lua_table), k);
 }
 
-void io_table_iterator_free(io_table_iterator_t *it)
+void io_lua_table_iterator_free(io_lua_table_iterator_t *it)
 {
 	if (it != NULL) {
 		gds_iterator_free(it->it);

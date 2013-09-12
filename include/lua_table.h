@@ -17,39 +17,21 @@
  * along with libio.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef libio_template_h_included
-#define libio_template_h_included
+#ifndef libio_lua_table_h_included
+#define libio_lua_table_h_included
 
 #include <libobject/object.h>
+#include <libobject/hash.h>
+#include <libobject/array.h>
 
-typedef struct io_template_s io_template_t;
+typedef object_t io_lua_table_t;
 
-io_template_t *
-io_template_new(
-	const char *template
-);
+io_lua_table_t * io_lua_table(void);
 
-io_template_t *
-io_template_new_from_file(
-	const char *filename
-);
+int io_lua_table_set(io_lua_table_t *lua_table, object_t *key, object_t *val);
+object_t * io_lua_table_get(io_lua_table_t *lua_table, object_t *key);
 
-void
-io_template_param(
-	io_template_t *T,
-	const char *name,
-	object_t *value
-);
+int object_is_lua_table(const object_t *o);
 
-const char *
-io_template_render(
-	io_template_t *T
-);
-
-void
-io_template_free(
-	io_template_t *T
-);
-
-#endif /* ! libio_template_h_included */
+#endif /* ! libio_lua_table_h_included */
 

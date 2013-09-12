@@ -17,39 +17,16 @@
  * along with libio.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef libio_template_h_included
-#define libio_template_h_included
+#ifndef libio_nil_h_included
+#define libio_nil_h_included
 
 #include <libobject/object.h>
 
-typedef struct io_template_s io_template_t;
+typedef object_t io_nil_t;
 
-io_template_t *
-io_template_new(
-	const char *template
-);
+io_nil_t * io_nil(void);
 
-io_template_t *
-io_template_new_from_file(
-	const char *filename
-);
+int object_is_nil(const object_t *o);
 
-void
-io_template_param(
-	io_template_t *T,
-	const char *name,
-	object_t *value
-);
-
-const char *
-io_template_render(
-	io_template_t *T
-);
-
-void
-io_template_free(
-	io_template_t *T
-);
-
-#endif /* ! libio_template_h_included */
+#endif /* ! libio_nil_h_included */
 

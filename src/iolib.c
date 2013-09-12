@@ -22,7 +22,7 @@
 #include <string.h>
 #include <lua.h>
 #include <lauxlib.h>
-#include <object/string.h>
+#include <libobject/string.h>
 #include "template.h"
 #include "compiler.h"
 

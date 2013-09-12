@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <libobject/string.h>
 #include "template.h"
 #include "tap.h"
 
@@ -18,7 +19,7 @@ int main()
 	io_template_t *T = io_template_new(tpl);
 	ok(T != NULL, "T is not NULL");
 	if (T) {
-		io_template_param(T, "name", io_value_string("world!"));
+		io_template_param(T, "name", string("world!"));
 		out = io_template_render(T);
 		ok(strcmp(out,
 			"Hello, world! \n"

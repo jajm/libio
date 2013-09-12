@@ -17,23 +17,25 @@
  * along with libio.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef libio_value_private_h_included
-#define libio_value_private_h_included
+#include <stdlib.h>
+#include <libobject/object.h>
+#include "nil.h"
 
-#include <lua.h>
-#include <libgends/hash_map.h>
+static const char IO_NIL_TYPE[] = "Io:nil";
 
-struct io_value_s {
-	io_value_type_t type;
-	union {
-		int b;
-		lua_Integer i;
-		lua_Number n;
-		char *s;
-		lua_CFunction f;
-		gds_hash_map_t *t;
-	} data;
-};
+io_nil_t * io_nil(void)
+{
+	io_nil_t *nil;
 
-#endif /* ! libio_value_private_h_included */
+	nil = object_new(IO_NIL_TYPE, NULL);
 
+	return nil;
+}
+
+int object_is_nil(const object_t *o)
+{
+	if (object_isa(o, IO_NIL_TYPE))
+		return 1;
+
+	return 0;
+}

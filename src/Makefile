@@ -2,8 +2,8 @@ include ../package.mk
 include ../config.mk
 
 CFLAGS := -Wall -Wextra -Werror -g -std=c99 $(CFLAGS)
-CPPFLAGS := -I../include -I/usr/local/include $(shell pkg-config --cflags lua5.2 libgends) $(CPPFLAGS)
-LDFLAGS := $(shell pkg-config --libs lua5.2 libgends) -lobject $(LDFLAGS)
+CPPFLAGS := -I../include $(shell pkg-config --cflags lua5.2 libgends libobject) $(CPPFLAGS)
+LDFLAGS := $(shell pkg-config --libs lua5.2 libgends libobject) $(LDFLAGS)
 LIBTOOL_VERSION := $(LIBTOOL_CURRENT):$(LIBTOOL_REVISION):$(LIBTOOL_AGE)
 
 C_SOURCES := $(wildcard *.c)

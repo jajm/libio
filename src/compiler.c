@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <object/string.h>
+#include <libobject/string.h>
 
 enum io_compile_mode {
 	IO_COMPILE_MODE_TEXT,

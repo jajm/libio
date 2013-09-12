@@ -24,17 +24,24 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
-#include <object/string.h>
+#include <libobject/string.h>
+#include <libobject/real.h>
+#include <libobject/integer.h>
+#include <libobject/boolean.h>
+#include <libobject/array.h>
+#include <libobject/array_iterator.h>
+#include <libobject/hash.h>
+#include "nil.h"
+#include "cfunction.h"
 #include "iolib.h"
-#include "value.h"
-#include "table_iterator.h"
+#include "lua_table_iterator.h"
 #include "compiler.h"
 #include "template.h"
 
 struct io_template_s {
 	_Bool data_is_a_filename;
 	char *data;
-	io_value_t *stash;
+	hash_t *stash;
 	char *last_render;
 };
 
@@ -65,7 +72,7 @@ io_template_t * io_template_new(const char *template)
 	T->data_is_a_filename = false;
 	T->last_render = NULL;
 
-	T->stash = io_value_table();
+	T->stash = hash_new();
 
 	return T;
 }
@@ -82,60 +89,63 @@ io_template_t * io_template_new_from_file(const char *filename)
 	return T;
 }
 
-void io_template_param(io_template_t *T, const char *name, io_value_t *value)
+void io_template_param(io_template_t *T, const char *name, object_t *value)
 {
 	if (T != NULL) {
-		io_value_t *key = io_value_string(name);
-		io_value_table_set(T->stash, key, value);
+		hash_set(T->stash, name, value);
 	} else {
 		fprintf(stderr, "T is NULL in io_template_param\n");
 	}
 }
 
-void io_value_to_lua_stack(io_value_t *v, lua_State *L)
+void io_object_to_lua_stack(object_t *o, lua_State *L)
 {
-	io_table_iterator_t *it;
-	io_value_t *k, *val;
+	io_lua_table_iterator_t *it;
+	object_t *k, *val;
 
-	switch (io_value_type(v)) {
-		case IO_VALUE_NIL:
-			lua_pushnil(L);
-			break;
-
-		case IO_VALUE_BOOLEAN:
-			lua_pushboolean(L, io_value_boolean_get(v));
-			break;
-
-		case IO_VALUE_INTEGER:
-			lua_pushinteger(L, io_value_integer_get(v));
-			break;
-
-		case IO_VALUE_NUMBER:
-			lua_pushnumber(L, io_value_number_get(v));
-			break;
-
-		case IO_VALUE_STRING:
-			lua_pushstring(L, io_value_string_get(v));
-			break;
-
-		case IO_VALUE_CFUNCTION:
-			lua_pushcfunction(L, io_value_cfunction_get(v));
-			break;
-
-		case IO_VALUE_TABLE:
-			lua_newtable(L);
-			it = io_table_iterator(v);
-			while (!io_table_iterator_step(it)) {
-				k = io_table_iterator_getkey(it);
-				val = io_table_iterator_getvalue(it);
-				io_value_to_lua_stack(k, L);
-				io_value_to_lua_stack(val, L);
-				lua_settable(L, -3);
-			}
-			io_table_iterator_free(it);
-			break;
-		default:
-			fprintf(stderr, "Unknown type\n");
+	if (object_is_nil(o)) {
+		lua_pushnil(L);
+	} else if (object_is_boolean(o)) {
+		lua_pushboolean(L, boolean_get(o));
+	} else if (object_is_integer(o)) {
+		lua_pushinteger(L, integer_get(o));
+	} else if (object_is_real(o)) {
+		lua_pushnumber(L, real_get(o));
+	} else if (object_is_string(o)) {
+		lua_pushstring(L, string_to_c_str(o));
+	} else if (object_is_cfunction(o)) {
+		lua_pushcfunction(L, io_cfunction_get(o));
+	} else if (object_is_lua_table(o)) {
+		lua_newtable(L);
+		it = io_lua_table_iterator(o);
+		while (!io_lua_table_iterator_step(it)) {
+			k = io_lua_table_iterator_getkey(it);
+			val = io_lua_table_iterator_getvalue(it);
+			io_object_to_lua_stack(k, L);
+			io_object_to_lua_stack(val, L);
+			lua_settable(L, -3);
+		}
+		io_lua_table_iterator_free(it);
+	} else if (object_is_array(o)) {
+		int i = 1;
+		lua_newtable(L);
+		array_foreach(o, val) {
+			lua_pushinteger(L, i);
+			io_object_to_lua_stack(val, L);
+			lua_settable(L, -3);
+			i++;
+		}
+	} else if (object_is_hash(o)) {
+		array_t *keys = hash_keys(o);
+		lua_newtable(L);
+		array_foreach(keys, key) {
+			io_object_to_lua_stack(key, L);
+			io_object_to_lua_stack(hash_get(o, string_to_c_str(key)), L);
+			lua_settable(L, -3);
+		}
+		array_free(keys);
+	} else {
+		fprintf(stderr, "Unknown type (%s) in %s\n", object_type(o), __func__);
 	}
 }
 
@@ -154,7 +164,6 @@ const char * io_template_render(io_template_t *T)
 	lua_pushlightuserdata(L, output);
 	lua_setfield(L, LUA_REGISTRYINDEX, "io_output");
 
-
 	if (T->data_is_a_filename) {
 		lua_code = io_compile_file(T->data, "#{", "}#");
 		lua_name = T->data;
@@ -165,7 +174,7 @@ const char * io_template_render(io_template_t *T)
 
 	if (luaL_loadbuffer(L, lua_code, strlen(lua_code), lua_name) == LUA_OK) {
 		// stash = ...
-		io_value_to_lua_stack(T->stash, L);
+		io_object_to_lua_stack(T->stash, L);
 
 		// stash_mt = { __index = _G }
 		lua_newtable(L);
@@ -200,7 +209,7 @@ void io_template_free(io_template_t *T)
 {
 	if (T != NULL) {
 		free(T->data);
-		io_value_free(T->stash);
+		object_free(T->stash);
 		free(T->last_render);
 		free(T);
 	}

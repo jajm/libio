@@ -17,21 +17,22 @@
  * along with libio.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef libio_table_iterator_h_included
-#define libio_table_iterator_h_included
+#ifndef libio_lua_table_iterator_h_included
+#define libio_lua_table_iterator_h_included
 
-#include "value.h"
+#include <libobject/object.h>
+#include "lua_table.h"
 
-typedef struct io_table_iterator_s io_table_iterator_t;
+typedef struct io_lua_table_iterator_s io_lua_table_iterator_t;
 
-io_table_iterator_t * io_table_iterator(io_value_t *v);
+io_lua_table_iterator_t * io_lua_table_iterator(io_lua_table_t *lua_table);
 
-int io_table_iterator_reset(io_table_iterator_t *it);
-int io_table_iterator_step(io_table_iterator_t *it);
-io_value_t * io_table_iterator_getkey(io_table_iterator_t *it);
-io_value_t * io_table_iterator_getvalue(io_table_iterator_t *it);
+int io_lua_table_iterator_reset(io_lua_table_iterator_t *it);
+int io_lua_table_iterator_step(io_lua_table_iterator_t *it);
+object_t * io_lua_table_iterator_getkey(io_lua_table_iterator_t *it);
+object_t * io_lua_table_iterator_getvalue(io_lua_table_iterator_t *it);
 
-void io_table_iterator_free(io_table_iterator_t *it);
+void io_lua_table_iterator_free(io_lua_table_iterator_t *it);
 
-#endif /* ! libio_table_iterator_h_included */
+#endif /* ! libio_lua_table_iterator_h_included */
 
