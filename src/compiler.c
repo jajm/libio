@@ -115,11 +115,13 @@ char * io_compile_file(const char *filename, const char *start_tag,
 	const char *end_tag)
 {
 	FILE *fp;
-	char *out;
+	char *out = NULL;
 
 	fp = fopen(filename, "r");
-	out = io_compile_filep(fp, start_tag, end_tag);
-	fclose(fp);
+	if (fp != NULL) {
+		out = io_compile_filep(fp, start_tag, end_tag);
+		fclose(fp);
+	}
 
 	return out;
 }
