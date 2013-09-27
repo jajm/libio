@@ -9,9 +9,10 @@ In order to parse this file and produce the wanted output, you have to write
 this little C program:
 
     #include <libio/template.h>
+    #include <libobject/string.h>
     int main() {
         io_template_t *T = io_template_new_from_file("hello.tpl");
-        io_template_param(T, "name", io_value_string("WORLD"));
+        io_template_param(T, "name", string("WORLD"));
         char *out = io_template_render(T);
         printf(out);
         free(out);
