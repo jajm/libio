@@ -136,7 +136,8 @@ int io_lua_table_set(io_lua_table_t *lua_table, object_t *key, object_t *val)
 
 	if (object_is_lua_table(lua_table)) {
 		hash_map = object_value(lua_table);
-		gds_hash_map_set(hash_map, key, val, (gds_free_cb)object_free);
+		gds_hash_map_set(hash_map, key, val, (gds_free_cb)object_free,
+			(gds_free_cb) object_free);
 	}
 
 	return 0;

@@ -29,7 +29,6 @@
 #include <libobject/integer.h>
 #include <libobject/boolean.h>
 #include <libobject/array.h>
-#include <libobject/array_iterator.h>
 #include <libobject/hash.h>
 #include "nil.h"
 #include "cfunction.h"
