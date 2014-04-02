@@ -9,13 +9,13 @@ In order to parse this file and produce the wanted output, you have to write
 this little C program:
 
     #include <libio/template.h>
-    #include <libobject/string.h>
+    #include <embody/embody.h>
+    #include <sds.h>
     int main() {
         io_template_t *T = io_template_new_from_file("hello.tpl");
-        io_template_param(T, "name", string("WORLD"));
-        char *out = io_template_render(T);
-        printf(out);
-        free(out);
+        io_template_param(T, "name", emb_new("sds", sdsnew("WORLD")));
+        puts(io_template_render(T));
+        io_template_free(T);
         return 0;
     }
 
@@ -23,3 +23,11 @@ That will produce the following output:
 
     Hello, world
 
+
+Requirements
+============
+
+libio requires the following libraries:
+* libgends (>= 2)
+* sds
+* embody

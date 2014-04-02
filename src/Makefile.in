@@ -1,19 +1,20 @@
-include ../package.mk
 include ../config.mk
 
 CFLAGS := -Wall -Wextra -Werror -g -std=c99 $(CFLAGS)
-CPPFLAGS := -I../include $(shell pkg-config --cflags lua5.2 libgends libobject) $(CPPFLAGS)
-LDFLAGS := $(shell pkg-config --libs lua5.2 libgends libobject) $(LDFLAGS)
+CPPFLAGS := -I../include @LUA52_CFLAGS@ @LIBGENDS_CFLAGS@ @EMBODY_CFLAGS@ @SDS_CFLAGS@ $(CPPFLAGS)
+LDFLAGS := @LUA52_LIBS@ @LIBGENDS_LIBS@ @EMBODY_LIBS@ @SDS_LIBS@ $(LDFLAGS)
+LIBTOOL_CURRENT := @LIBTOOL_CURRENT@
+LIBTOOL_REVISION := @LIBTOOL_REVISION@
+LIBTOOL_AGE := @LIBTOOL_AGE@
 LIBTOOL_VERSION := $(LIBTOOL_CURRENT):$(LIBTOOL_REVISION):$(LIBTOOL_AGE)
 
-C_SOURCES := $(wildcard *.c)
-C_OBJS := $(C_SOURCES:.c=.lo)
-OBJS := $(C_OBJS)
+SOURCES := $(wildcard *.c)
+OBJS := $(SOURCES:.c=.lo)
 
 all: $(LIBRARY_NAME)
 
 $(LIBRARY_NAME): $(OBJS)
-	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -rpath $(LIBDIR) -version-info $(LIBTOOL_VERSION) -release $(PACKAGE_RELEASE) -o $@ $^
+	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -rpath $(LIBDIR) -version-info $(LIBTOOL_VERSION) -o $@ $^
 
 .deps/%.d: %.c
 	@set -e; rm -f $@; \
@@ -22,7 +23,7 @@ $(LIBRARY_NAME): $(OBJS)
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
--include $(patsubst %.c,.deps/%.d,$(C_SOURCES))
+-include $(patsubst %.c,.deps/%.d,$(SOURCES))
 
 %.lo: %.c
 	$(LIBTOOL) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<

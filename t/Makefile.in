@@ -1,9 +1,8 @@
-include ../package.mk
 include ../config.mk
 
 CFLAGS := -Wall -Wextra -Werror -g -std=c99 $(CFLAGS)
-CPPFLAGS := -I../include $(shell pkg-config --cflags libobject) $(CPPFLAGS)
-LDFLAGS := $(shell pkg-config --libs libobject) $(LDFLAGS)
+CPPFLAGS := -I../include @LIBGENDS_CFLAGS@ @EMBODY_CFLAGS@ @SDS_CFLAGS@ $(CPPFLAGS)
+LDFLAGS := @LIBGENDS_LIBS@ @EMBODY_LIBS@ @SDS_LIBS@ $(LDFLAGS)
 
 PROGRAMS := $(patsubst %.c,%.t,$(wildcard *.c))
 

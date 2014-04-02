@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Julian Maurice
+ * Copyright 2014 Julian Maurice
  *
  * This file is part of libio
  *
@@ -17,25 +17,33 @@
  * along with libio.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdlib.h>
-#include <libobject/object.h>
-#include "nil.h"
+#ifndef io_lua_value_h_included
+#define io_lua_value_h_included
 
-static const char IO_NIL_TYPE[] = "Io:nil";
+#include <lua.h>
 
-io_nil_t * io_nil(void)
-{
-	io_nil_t *nil;
+typedef struct {
+	enum {
+		LUA_VALUE_TYPE_NONE = 0,
+		LUA_VALUE_TYPE_NIL,
+		LUA_VALUE_TYPE_BOOLEAN,
+		LUA_VALUE_TYPE_INTEGER,
+		LUA_VALUE_TYPE_UNSIGNED,
+		LUA_VALUE_TYPE_NUMBER,
+		LUA_VALUE_TYPE_STRING,
+		LUA_VALUE_TYPE_CFUNCTION,
+		LUA_VALUE_TYPE_LIGHTUSERDATA
+	} type;
+	union {
+		int boolean;
+		lua_Integer integer;
+		lua_Unsigned unsignd;
+		lua_Number number;
+		const char *string;
+		lua_CFunction cfunction;
+		void *lightuserdata;
+	} value;
+} io_lua_value_t;
 
-	nil = object_new(IO_NIL_TYPE, NULL);
 
-	return nil;
-}
-
-int object_is_nil(const object_t *o)
-{
-	if (object_isa(o, IO_NIL_TYPE))
-		return 1;
-
-	return 0;
-}
+#endif /* ! io_lua_value_h_included */

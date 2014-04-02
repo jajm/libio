@@ -20,7 +20,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <libobject/string.h>
+#include <sds.h>
+#include "io_embody.h"
 
 enum io_compile_mode {
 	IO_COMPILE_MODE_TEXT,
@@ -31,7 +32,7 @@ enum io_compile_mode {
 char * io_compile(const char *template, const char *start_tag,
 	const char *end_tag)
 {
-	string_t *buf = string("Io.output(\"");
+	sds buf = sdsnew("Io.output(\"");
 	char cbuf[2] = "\0\0";
 	char *out;
 	const char *ptr = template;
@@ -39,49 +40,47 @@ char * io_compile(const char *template, const char *start_tag,
 	size_t start_tag_len = strlen(start_tag);
 	size_t end_tag_len = strlen(end_tag);
 	size_t len;
-	const char *tmp;
 
 	while (*ptr != '\0') {
 		if (mode == IO_COMPILE_MODE_TEXT && *ptr == '\n') {
-			string_cat(buf, "\\n\");\nIo.output(\"");
+			buf = sdscat(buf, "\\n\");\nIo.output(\"");
 		} else if (mode == IO_COMPILE_MODE_TEXT && *ptr == '"') {
-			string_cat(buf, "\\\"");
+			buf = sdscat(buf, "\\\"");
 		} else if (mode == IO_COMPILE_MODE_TEXT && strncmp(ptr, start_tag, start_tag_len) == 0) {
-			string_cat(buf, "\");");
+			buf = sdscat(buf, "\");");
 			if (ptr[start_tag_len] == '=') {
 				mode = IO_COMPILE_MODE_LUA_EXPR;
-				string_cat(buf, "Io.output(");
+				buf = sdscat(buf, "Io.output(");
 				ptr += start_tag_len;
 			} else {
 				mode = IO_COMPILE_MODE_LUA;
 				ptr += start_tag_len - 1;
 			}
 		} else if (mode == IO_COMPILE_MODE_LUA && strncmp(ptr, end_tag, end_tag_len) == 0) {
-			string_cat(buf, "Io.output(\"");
+			buf = sdscat(buf, "Io.output(\"");
 			mode = IO_COMPILE_MODE_TEXT;
 			ptr += end_tag_len - 1;
 		} else if (mode == IO_COMPILE_MODE_LUA_EXPR && strncmp(ptr, end_tag, end_tag_len) == 0) {
-			string_cat(buf, "); Io.output(\"");
+			buf = sdscat(buf, "); Io.output(\"");
 			mode = IO_COMPILE_MODE_TEXT;
 			ptr += end_tag_len - 1;
 		} else {
 			cbuf[0] = *ptr;
-			string_cat(buf, cbuf);
+			buf = sdscat(buf, cbuf);
 		}
 		ptr++;
 	}
 
 	if (mode == IO_COMPILE_MODE_TEXT) {
-		string_cat(buf, "\")");
+		buf = sdscat(buf, "\")");
 	} else if (mode == IO_COMPILE_MODE_LUA_EXPR) {
-		string_cat(buf, ")");
+		buf = sdscat(buf, ")");
 	}
 
-	tmp = string_to_c_str(buf);
-	len = strlen(tmp);
+	len = sdslen(buf);
 	out = malloc(sizeof(char) * (len+1));
-	strncpy(out, tmp, len+1);
-	string_free(buf);
+	strncpy(out, buf, len+1);
+	sdsfree(buf);
 
 	return out;
 }
@@ -90,23 +89,23 @@ char * io_compile_filep(FILE *filep, const char *start_tag, const char *end_tag)
 {
 	char buf[1024];
 	char *out;
-	string_t *tpl;
+	sds tpl;
 
 	if (filep == NULL) {
 		fprintf(stderr, "filep is NULL\n");
 		return NULL;
 	}
 
-	tpl = string("");
+	tpl = sdsempty();
 
 	while (!feof(filep)) {
 		if(fgets(buf, 1024, filep)) {
-			string_cat(tpl, buf);
+			tpl = sdscat(tpl, buf);
 		}
 	}
 
-	out = io_compile(string_to_c_str(tpl), start_tag, end_tag);
-	string_free(tpl);
+	out = io_compile(tpl, start_tag, end_tag);
+	sdsfree(tpl);
 
 	return out;
 }

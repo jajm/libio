@@ -20,8 +20,6 @@
 #ifndef libio_template_h_included
 #define libio_template_h_included
 
-#include <libobject/object.h>
-
 typedef struct io_template_s io_template_t;
 
 io_template_t *
@@ -38,7 +36,7 @@ void
 io_template_param(
 	io_template_t *T,
 	const char *name,
-	object_t *value
+	void **value
 );
 
 const char *

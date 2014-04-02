@@ -1,0 +1,17 @@
+CC := gcc
+MAKE := make
+LIBTOOL := libtool
+INSTALL := install
+
+PACKAGE_NAME := @PACKAGE_NAME@
+LIBRARY_NAME := $(PACKAGE_NAME).la
+
+prefix := @prefix@
+exec_prefix := @exec_prefix@
+libdir := @libdir@
+includedir := @includedir@/$(PACKAGE_NAME)
+pkgconfigdir := $(libdir)/pkgconfig
+
+LIBDIR := $(DESTDIR)$(libdir)
+INCLUDEDIR := $(DESTDIR)$(includedir)
+PKGCONFIGDIR := $(DESTDIR)$(pkgconfigdir)

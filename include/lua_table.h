@@ -20,18 +20,11 @@
 #ifndef libio_lua_table_h_included
 #define libio_lua_table_h_included
 
-#include <libobject/object.h>
-#include <libobject/hash.h>
-#include <libobject/array.h>
+#include <libgends/hash_map.h>
 
-typedef object_t io_lua_table_t;
+typedef gds_hash_map_t io_lua_table_t;
 
-io_lua_table_t * io_lua_table(void);
-
-int io_lua_table_set(io_lua_table_t *lua_table, object_t *key, object_t *val);
-object_t * io_lua_table_get(io_lua_table_t *lua_table, object_t *key);
-
-int object_is_lua_table(const object_t *o);
+io_lua_table_t * io_lua_table_new(void);
 
 #endif /* ! libio_lua_table_h_included */
 

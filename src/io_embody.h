@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Julian Maurice
+ * Copyright 2014 Julian Maurice
  *
  * This file is part of libio
  *
@@ -17,19 +17,13 @@
  * along with libio.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef libio_cfunction_h_included
-#define libio_cfunction_h_included
+#ifndef io_embody_h_included
+#define io_embody_h_included
 
-#include <lua.h>
-#include <libobject/object.h>
+#include "lua_value.h"
 
-typedef object_t io_cfunction_t;
+void io_emb_initialize(void);
 
-io_cfunction_t * io_cfunction(lua_CFunction f);
-int io_cfunction_set(io_cfunction_t *cf, lua_CFunction f);
-lua_CFunction io_cfunction_get(const io_cfunction_t *cf);
+void io_emb_data_to_lua_value(void **data, io_lua_value_t *lua_value);
 
-int object_is_cfunction(const object_t *object);
-
-#endif /* ! libio_cfunction_h_included */
-
+#endif /* ! io_embody_h_included */

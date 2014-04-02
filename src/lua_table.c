@@ -20,146 +20,115 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <libobject/object.h>
-#include <libobject/boolean.h>
-#include <libobject/integer.h>
-#include <libobject/real.h>
-#include <libobject/string.h>
+#include <stdbool.h>
 #include <libgends/hash_map.h>
-#include "nil.h"
-#include "cfunction.h"
+#include <libgends/hash_functions.h>
+#include <embody/embody.h>
+#include <sds.h>
+#include "lua_value.h"
 #include "lua_table.h"
+#include "io_embody.h"
 
-static const char IO_LUA_TABLE_TYPE[] = "Io:lua_table";
-static const unsigned int IO_LUA_TABLE_HASH_SIZE = 128;
+static const unsigned long IO_LUA_TABLE_HASH_SIZE = 128;
 
-unsigned int io_lua_table_string_hash(const char *s)
+unsigned long io_lua_table_hash_callback(void **data, unsigned long size)
 {
-	unsigned int hash = 0;
+	unsigned long hash = 0;
+	io_lua_value_t lua_value;
 
-	if (s != NULL) {
-		int i = 1;
-		while (*s != '\0') {
-			hash += (*s) * i;
-			i++;
-			s++;
-		}
-	}
+	lua_value.type = LUA_VALUE_TYPE_NONE;
+	io_emb_data_to_lua_value(data, &lua_value);
 
-	return hash;
-}
-
-unsigned int io_lua_table_hash_callback(const object_t *o, unsigned int size)
-{
-	unsigned int hash = 0;
-
-	if (object_isset(o)) {
-		if (object_is_nil(o)) {
-			hash = 0;
-		} else if (object_is_boolean(o)) {
-			hash = (unsigned int) (boolean_get(o) ? 1 : 0);
-		} else if (object_is_integer(o)) {
-			hash = (unsigned int) integer_get(o);
-		} else if (object_is_real(o)) {
-			hash = (unsigned int) real_get(o);
-		} else if (object_is_string(o)) {
-			const char *s = string_to_c_str(o);
-			hash = io_lua_table_string_hash(s);
-		} else if (object_is_cfunction(o)) {
-			hash = (intptr_t) io_cfunction_get(o);
-		} else if (object_is_lua_table(o)) {
-			hash = (intptr_t) object_value(o);
-		} else {
-			fprintf(stderr, "Unknown type\n");
+	if (lua_value.type != LUA_VALUE_TYPE_NONE) {
+		switch (lua_value.type) {
+			case LUA_VALUE_TYPE_BOOLEAN:
+				hash = lua_value.value.boolean ? 1 : 0;
+				break;
+			case LUA_VALUE_TYPE_INTEGER:
+				hash = lua_value.value.integer;
+				break;
+			case LUA_VALUE_TYPE_UNSIGNED:
+				hash = lua_value.value.unsignd;
+				break;
+			case LUA_VALUE_TYPE_NUMBER:
+				hash = lua_value.value.number;
+				break;
+			case LUA_VALUE_TYPE_STRING:
+				hash = gds_hash_djb2(lua_value.value.string);
+				break;
+			case LUA_VALUE_TYPE_CFUNCTION:
+				hash = (unsigned long) lua_value.value.cfunction;
+				break;
+			case LUA_VALUE_TYPE_LIGHTUSERDATA:
+				hash = (unsigned long) lua_value.value.lightuserdata;
+				break;
+			default:
+				hash = 0;
 		}
 	}
 
 	return hash % size;
 }
 
-int io_lua_table_cmpkey_callback(const object_t *o1, const object_t *o2)
+int io_lua_table_cmpkey_callback(void **data1, void **data2)
 {
 	int cmp = 0;
 
-	if (o1 == NULL && o2 == NULL) {
+	if (data1 == NULL && data2 == NULL) {
 		cmp = 0;
-	} else if (o1 == NULL && o2 != NULL) {
+	} else if (data1 == NULL && data2 != NULL) {
 		cmp = 1;
-	} else if (o1 != NULL && o2 == NULL) {
+	} else if (data1 != NULL && data2 == NULL) {
 		cmp = -1;
-	} else if (object_type(o1) != object_type(o2)) {
-		cmp = strcmp(object_type(o1), object_type(o2));
+	} else if (emb_type(data1) != emb_type(data2)) {
+		cmp = strcmp(emb_type_name(data1), emb_type_name(data2));
 	} else {
-		/* o1 and o2 are of the same type */
-		if (object_is_nil(o1)) {
-			cmp = 0;
-		} else if (object_is_boolean(o1)) {
-			int b1 = boolean_get(o1) ? 1 : 0;
-			int b2 = boolean_get(o2) ? 1 : 0;
-			cmp = b1 - b2;
-		} else if (object_is_integer(o1)) {
-			cmp = integer_get(o1) - integer_get(o2);
-		} else if (object_is_real(o1)) {
-			cmp = (int) (real_get(o1) - real_get(o2));
-		} else if (object_is_string(o1)) {
-			const char *s1 = string_to_c_str(o1);
-			const char *s2 = string_to_c_str(o2);
-			cmp = strcmp(s1, s2);
-		} else if (object_is_cfunction(o1)) {
-			cmp = (int) (io_cfunction_get(o1) - io_cfunction_get(o2));
-		} else if (object_is_lua_table(o1)) {
-			cmp = (int) (object_value(o1) - object_value(o2));
+		io_lua_value_t v1, v2;
+
+		v1.type = v2.type = LUA_VALUE_TYPE_NONE;
+		io_emb_data_to_lua_value(data1, &v1);
+		io_emb_data_to_lua_value(data2, &v2);
+		if (v1.type != LUA_VALUE_TYPE_NONE) {
+			switch (v1.type) {
+				case LUA_VALUE_TYPE_BOOLEAN:
+					cmp = v1.value.boolean - v2.value.boolean;
+					break;
+				case LUA_VALUE_TYPE_INTEGER:
+					cmp = v1.value.integer - v2.value.integer;
+					break;
+				case LUA_VALUE_TYPE_UNSIGNED:
+					cmp = v1.value.unsignd - v2.value.unsignd;
+					break;
+				case LUA_VALUE_TYPE_NUMBER:
+					cmp = v1.value.number - v2.value.number;
+					break;
+				case LUA_VALUE_TYPE_STRING:
+					cmp = strcmp(v1.value.string, v2.value.string);
+					break;
+				case LUA_VALUE_TYPE_CFUNCTION:
+					cmp = v1.value.cfunction - v2.value.cfunction;
+					break;
+				case LUA_VALUE_TYPE_LIGHTUSERDATA:
+					cmp = v1.value.lightuserdata - v2.value.lightuserdata;
+					break;
+				default:
+					cmp = 0;
+			}
 		} else {
-			fprintf(stderr, "Unknown type\n");
+			cmp = data1 - data2;
 		}
 	}
 
 	return cmp;
 }
 
-io_lua_table_t * io_lua_table(void)
+io_lua_table_t * io_lua_table_new(void)
 {
 	io_lua_table_t *lua_table;
-	gds_hash_map_t *hash_map;
 
-	hash_map = gds_hash_map_new(IO_LUA_TABLE_HASH_SIZE,
-		(gds_hash_cb) io_lua_table_hash_callback,
-		(gds_cmpkey_cb) io_lua_table_cmpkey_callback);
-	lua_table = object_new(IO_LUA_TABLE_TYPE, hash_map);
+	lua_table = gds_hash_map_new(IO_LUA_TABLE_HASH_SIZE,
+		io_lua_table_hash_callback, io_lua_table_cmpkey_callback,
+		NULL, emb_container_free, emb_container_free);
 
 	return lua_table;
-}
-
-int io_lua_table_set(io_lua_table_t *lua_table, object_t *key, object_t *val)
-{
-	gds_hash_map_t *hash_map;
-
-	if (object_is_lua_table(lua_table)) {
-		hash_map = object_value(lua_table);
-		gds_hash_map_set(hash_map, key, val, (gds_free_cb)object_free,
-			(gds_free_cb) object_free);
-	}
-
-	return 0;
-}
-
-object_t * io_lua_table_get(io_lua_table_t *lua_table, object_t *key)
-{
-	gds_hash_map_t *hash_map;
-	object_t *val = NULL;
-
-	if (object_is_lua_table(lua_table)) {
-		hash_map = object_value(lua_table);
-		val = gds_hash_map_get(hash_map, key);
-	}
-
-	return val;
-}
-
-int object_is_lua_table(const object_t *o)
-{
-	if (object_isa(o, IO_LUA_TABLE_TYPE))
-		return 1;
-
-	return 0;
 }

@@ -24,30 +24,39 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
-#include <libobject/string.h>
-#include <libobject/real.h>
-#include <libobject/integer.h>
-#include <libobject/boolean.h>
-#include <libobject/array.h>
-#include <libobject/hash.h>
-#include "nil.h"
-#include "cfunction.h"
+#include <sds.h>
+#include <embody/embody.h>
+#include <libgends/hash_map.h>
+#include <libgends/hash_functions.h>
 #include "iolib.h"
-#include "lua_table_iterator.h"
 #include "compiler.h"
 #include "template.h"
+#include "io_embody.h"
+#include "lua_value.h"
 
 struct io_template_s {
 	_Bool data_is_a_filename;
 	char *data;
-	hash_t *stash;
+	void **stash;
 	char *last_render;
 };
+
+static int io_initialized = 0;
+void io_initialize(void)
+{
+	if (!io_initialized) {
+		io_emb_initialize();
+
+		io_initialized = 1;
+	}
+}
 
 io_template_t * io_template_new(const char *template)
 {
 	io_template_t *T = NULL;
 	size_t len;
+
+	io_initialize();
 
 	if (template == NULL || template[0] == '\0') {
 		fprintf(stderr, "Template is empty in io_template_new\n");
@@ -71,7 +80,9 @@ io_template_t * io_template_new(const char *template)
 	T->data_is_a_filename = false;
 	T->last_render = NULL;
 
-	T->stash = hash_new();
+	gds_hash_map_t *stash = gds_hash_map_new(128, gds_hash_djb2, strcmp,
+		NULL, emb_container_free, emb_container_free);
+	T->stash = emb_new("gds_hash_map", stash);
 
 	return T;
 }
@@ -88,63 +99,80 @@ io_template_t * io_template_new_from_file(const char *filename)
 	return T;
 }
 
-void io_template_param(io_template_t *T, const char *name, object_t *value)
+void io_template_param(io_template_t *T, const char *name, void **value)
 {
 	if (T != NULL) {
-		hash_set(T->stash, name, value);
+		gds_hash_map_t *stash_p = *(T->stash);
+		gds_hash_map_set(stash_p, emb_new("sds", sdsnew(name)), value);
 	} else {
 		fprintf(stderr, "T is NULL in io_template_param\n");
 	}
 }
 
-void io_object_to_lua_stack(object_t *o, lua_State *L)
+void io_object_to_lua_stack(void **object, lua_State *L)
 {
-	io_lua_table_iterator_t *it;
-	object_t *k, *val;
-
-	if (object_is_nil(o)) {
+	if (object == NULL) {
 		lua_pushnil(L);
-	} else if (object_is_boolean(o)) {
-		lua_pushboolean(L, boolean_get(o));
-	} else if (object_is_integer(o)) {
-		lua_pushinteger(L, integer_get(o));
-	} else if (object_is_real(o)) {
-		lua_pushnumber(L, real_get(o));
-	} else if (object_is_string(o)) {
-		lua_pushstring(L, string_to_c_str(o));
-	} else if (object_is_cfunction(o)) {
-		lua_pushcfunction(L, io_cfunction_get(o));
-	} else if (object_is_lua_table(o)) {
-		lua_newtable(L);
-		it = io_lua_table_iterator(o);
-		while (!io_lua_table_iterator_step(it)) {
-			k = io_lua_table_iterator_getkey(it);
-			val = io_lua_table_iterator_getvalue(it);
-			io_object_to_lua_stack(k, L);
-			io_object_to_lua_stack(val, L);
-			lua_settable(L, -3);
+		return;
+	}
+
+	io_lua_value_t lua_value;
+	lua_value.type = LUA_VALUE_TYPE_NONE;
+	io_emb_data_to_lua_value(object, &lua_value);
+	if (lua_value.type != LUA_VALUE_TYPE_NONE) {
+		switch (lua_value.type) {
+			case LUA_VALUE_TYPE_NIL:
+				lua_pushnil(L);
+				break;
+			case LUA_VALUE_TYPE_BOOLEAN:
+				lua_pushboolean(L, lua_value.value.boolean);
+				break;
+			case LUA_VALUE_TYPE_INTEGER:
+				lua_pushinteger(L, lua_value.value.integer);
+				break;
+			case LUA_VALUE_TYPE_UNSIGNED:
+				lua_pushunsigned(L, lua_value.value.unsignd);
+				break;
+			case LUA_VALUE_TYPE_NUMBER:
+				lua_pushnumber(L, lua_value.value.number);
+				break;
+			case LUA_VALUE_TYPE_STRING:
+				lua_pushstring(L, lua_value.value.string);
+				break;
+			case LUA_VALUE_TYPE_CFUNCTION:
+				lua_pushcfunction(L, lua_value.value.cfunction);
+				break;
+			case LUA_VALUE_TYPE_LIGHTUSERDATA:
+				lua_pushlightuserdata(L, lua_value.value.lightuserdata);
+				break;
+			default:
+				lua_pushnil(L);
 		}
-		io_lua_table_iterator_free(it);
-	} else if (object_is_array(o)) {
-		int i = 1;
-		lua_newtable(L);
-		array_foreach(o, val) {
-			lua_pushinteger(L, i);
-			io_object_to_lua_stack(val, L);
-			lua_settable(L, -3);
-			i++;
-		}
-	} else if (object_is_hash(o)) {
-		array_t *keys = hash_keys(o);
-		lua_newtable(L);
-		array_foreach(keys, key) {
-			io_object_to_lua_stack(key, L);
-			io_object_to_lua_stack(hash_get(o, string_to_c_str(key)), L);
-			lua_settable(L, -3);
-		}
-		array_free(keys);
 	} else {
-		fprintf(stderr, "Unknown type (%s) in %s\n", object_type(o), __func__);
+		gds_iterator_t *(*iterator_callback)(void *);
+		emb_type_t *type;
+
+		type = emb_type(object);
+		iterator_callback = emb_type_get_callback(type, "gds_iterator");
+		if (iterator_callback) {
+			gds_iterator_t *it;
+			void **k, **val;
+
+			lua_newtable(L);
+			it = iterator_callback(*object);
+			while (!gds_iterator_step(it)) {
+				k = gds_iterator_getkey(it);
+				val = gds_iterator_get(it);
+				io_object_to_lua_stack(k, L);
+				io_object_to_lua_stack(val, L);
+				lua_settable(L, -3);
+			}
+			gds_iterator_free(it);
+		} else {
+			fprintf(stderr, "Unknown type (%s) in %s\n",
+				emb_type_name(object), __func__);
+			lua_pushnil(L);
+		}
 	}
 }
 
@@ -159,8 +187,8 @@ const char * io_template_render(io_template_t *T)
 	luaL_openlibs(L);
 	io_require_io(L);
 
-	string_t *output = string("");
-	lua_pushlightuserdata(L, output);
+	sds output = sdsempty();
+	lua_pushlightuserdata(L, &output);
 	lua_setfield(L, LUA_REGISTRYINDEX, "io_output");
 
 	if (T->data_is_a_filename) {
@@ -193,11 +221,11 @@ const char * io_template_render(io_template_t *T)
 
 	free(lua_code);
 
-	len = string_length(output);
+	len = sdslen(output);
 	free(T->last_render);
 	T->last_render = malloc(sizeof(char) * (len+1));
-	strncpy(T->last_render, string_to_c_str(output), len+1);
-	string_free(output);
+	strncpy(T->last_render, output, len+1);
+	sdsfree(output);
 
 	lua_close(L);
 
@@ -208,7 +236,7 @@ void io_template_free(io_template_t *T)
 {
 	if (T != NULL) {
 		free(T->data);
-		object_free(T->stash);
+		emb_free(T->stash);
 		free(T->last_render);
 		free(T);
 	}

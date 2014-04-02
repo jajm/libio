@@ -22,7 +22,7 @@
 #include <string.h>
 #include <lua.h>
 #include <lauxlib.h>
-#include <libobject/string.h>
+#include <sds.h>
 #include "template.h"
 #include "compiler.h"
 
@@ -64,28 +64,32 @@ int io_iolib_include(lua_State *L)
 
 int io_iolib_output(lua_State *L)
 {
-	string_t *output;
-	const char *s;
+	sds *output_p;
+	sds s;
 	int i, n;
 
 	n = lua_gettop(L);
 
 	lua_getfield(L, LUA_REGISTRYINDEX, "io_output");
-	output = lua_touserdata(L, -1);
+	output_p = lua_touserdata(L, -1);
 	lua_pop(L, 1);
 
 	for (i = -n; i < 0; i++) {
 		switch (lua_type(L, i)) {
+			case LUA_TBOOLEAN:
+				s = sdsfromlonglong(lua_toboolean(L, i));
+				break;
 			case LUA_TNUMBER:
 			case LUA_TSTRING:
-				s = lua_tostring(L, i);
+				s = sdsnew(lua_tostring(L, i));
 				break;
 
 			default:
-				s = lua_typename(L, lua_type(L, i));
+				s = sdsnew(lua_typename(L, lua_type(L, i)));
 		}
-		//printf("DEBUG: %s (%s)\n", s, lua_typename(L, lua_type(L, i)));
-		string_cat(output, s);
+		//fprintf(stderr, "DEBUG: %s (%s)\n", s, lua_typename(L, lua_type(L, i)));
+		*output_p = sdscat(*output_p, s);
+		sdsfree(s);
 	}
 
 	return 0;
