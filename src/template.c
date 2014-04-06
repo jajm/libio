@@ -99,7 +99,7 @@ io_template_t * io_template_new_from_file(const char *filename)
 	return T;
 }
 
-void io_template_param(io_template_t *T, const char *name, void **value)
+void io_template_param(io_template_t *T, const char *name, void *value)
 {
 	if (T != NULL) {
 		gds_hash_map_t *stash_p = *(T->stash);

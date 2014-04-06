@@ -36,7 +36,7 @@ void
 io_template_param(
 	io_template_t *T,
 	const char *name,
-	void **value
+	void *value
 );
 
 const char *

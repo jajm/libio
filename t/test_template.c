@@ -39,8 +39,8 @@ int main()
 		"Table element: #{= mytable.element }#\n"
 	;
 	T = io_template_new(tpl2);
-	io_template_param(T, "boolean_value", (void **)emb_new_bool(true));
-	io_template_param(T, "integer_value", (void **)emb_new_int8(127));
+	io_template_param(T, "boolean_value", emb_new_bool(true));
+	io_template_param(T, "integer_value", emb_new_int8(127));
 	gds_hash_map_t *table = io_lua_table_new();
 	gds_hash_map_set(table, emb_new("sds", sdsnew("element")), emb_new_short(32767));
 	io_template_param(T, "mytable", emb_new("gds_hash_map", table));
