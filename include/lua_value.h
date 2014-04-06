@@ -32,6 +32,8 @@ typedef struct {
 		LUA_VALUE_TYPE_NUMBER,
 		LUA_VALUE_TYPE_STRING,
 		LUA_VALUE_TYPE_CFUNCTION,
+		LUA_VALUE_TYPE_LIST,
+		LUA_VALUE_TYPE_TABLE,
 		LUA_VALUE_TYPE_LIGHTUSERDATA
 	} type;
 	union {
@@ -41,6 +43,8 @@ typedef struct {
 		lua_Number number;
 		const char *string;
 		lua_CFunction cfunction;
+		void *list;
+		void *table;
 		void *lightuserdata;
 	} value;
 } io_lua_value_t;

@@ -109,6 +109,61 @@ void io_template_param(io_template_t *T, const char *name, void *value)
 	}
 }
 
+void io_object_to_lua_stack(void **object, lua_State *L);
+
+static void io_list_to_lua_stack(void **list, lua_State *L)
+{
+	gds_iterator_t *(*iterator_callback)(void *);
+	emb_type_t *type;
+
+	type = emb_type(list);
+	iterator_callback = emb_type_get_callback(type, "gds_iterator");
+	if (iterator_callback) {
+		gds_iterator_t *it;
+		void **val;
+		unsigned int i = 1;
+
+		lua_newtable(L);
+		it = iterator_callback(*list);
+		while (!gds_iterator_step(it)) {
+			val = gds_iterator_get(it);
+			lua_pushunsigned(L, i);
+			io_object_to_lua_stack(val, L);
+			lua_settable(L, -3);
+			i++;
+		}
+		gds_iterator_free(it);
+	} else {
+		lua_pushnil(L);
+	}
+}
+
+static void io_table_to_lua_stack(void **table, lua_State *L)
+{
+	gds_iterator_t *(*iterator_callback)(void *);
+	emb_type_t *type;
+
+	type = emb_type(table);
+	iterator_callback = emb_type_get_callback(type, "gds_iterator");
+	if (iterator_callback) {
+		gds_iterator_t *it;
+		void **k, **val;
+
+		lua_newtable(L);
+		it = iterator_callback(*table);
+		while (!gds_iterator_step(it)) {
+			k = gds_iterator_getkey(it);
+			val = gds_iterator_get(it);
+			io_object_to_lua_stack(k, L);
+			io_object_to_lua_stack(val, L);
+			lua_settable(L, -3);
+		}
+		gds_iterator_free(it);
+	} else {
+		lua_pushnil(L);
+	}
+}
+
 void io_object_to_lua_stack(void **object, lua_State *L)
 {
 	if (object == NULL) {
@@ -142,6 +197,12 @@ void io_object_to_lua_stack(void **object, lua_State *L)
 			case LUA_VALUE_TYPE_CFUNCTION:
 				lua_pushcfunction(L, lua_value.value.cfunction);
 				break;
+			case LUA_VALUE_TYPE_LIST:
+				io_list_to_lua_stack(object, L);
+				break;
+			case LUA_VALUE_TYPE_TABLE:
+				io_table_to_lua_stack(object, L);
+				break;
 			case LUA_VALUE_TYPE_LIGHTUSERDATA:
 				lua_pushlightuserdata(L, lua_value.value.lightuserdata);
 				break;
@@ -149,30 +210,9 @@ void io_object_to_lua_stack(void **object, lua_State *L)
 				lua_pushnil(L);
 		}
 	} else {
-		gds_iterator_t *(*iterator_callback)(void *);
-		emb_type_t *type;
-
-		type = emb_type(object);
-		iterator_callback = emb_type_get_callback(type, "gds_iterator");
-		if (iterator_callback) {
-			gds_iterator_t *it;
-			void **k, **val;
-
-			lua_newtable(L);
-			it = iterator_callback(*object);
-			while (!gds_iterator_step(it)) {
-				k = gds_iterator_getkey(it);
-				val = gds_iterator_get(it);
-				io_object_to_lua_stack(k, L);
-				io_object_to_lua_stack(val, L);
-				lua_settable(L, -3);
-			}
-			gds_iterator_free(it);
-		} else {
-			fprintf(stderr, "Unknown type (%s) in %s\n",
-				emb_type_name(object), __func__);
-			lua_pushnil(L);
-		}
+		fprintf(stderr, "Unknown type (%s) in %s\n",
+			emb_type_name(object), __func__);
+		lua_pushnil(L);
 	}
 }
 

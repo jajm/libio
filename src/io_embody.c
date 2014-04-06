@@ -113,6 +113,18 @@ static void io_cfunction_to_lua_value(void *data, io_lua_value_t *lua_value)
 	lua_value->value.cfunction = data;
 }
 
+static void io_list_to_lua_value(void *data, io_lua_value_t *lua_value)
+{
+	lua_value->type = LUA_VALUE_TYPE_LIST;
+	lua_value->value.list = data;
+}
+
+static void io_table_to_lua_value(void *data, io_lua_value_t *lua_value)
+{
+	lua_value->type = LUA_VALUE_TYPE_TABLE;
+	lua_value->value.table = data;
+}
+
 static void io_emb_register_callback(emb_type_t *type, const char *name,
 	void *callback)
 {
@@ -201,26 +213,32 @@ static void io_emb_initialize_gds_types(void)
 	emb_type_t *type;
 
 	type = emb_type_get("gds_slist");
+	io_emb_register_to_lua_value(type, io_list_to_lua_value);
 	io_emb_register_gds_iterator(type, gds_slist_iterator_new);
 	io_emb_register_callback(type, "free", gds_slist_free);
 
 	type = emb_type_get("gds_dlist");
+	io_emb_register_to_lua_value(type, io_list_to_lua_value);
 	io_emb_register_gds_iterator(type, gds_dlist_iterator_new);
 	io_emb_register_callback(type, "free", gds_dlist_free);
 
 	type = emb_type_get("gds_hash_map");
+	io_emb_register_to_lua_value(type, io_table_to_lua_value);
 	io_emb_register_gds_iterator(type, gds_hash_map_iterator_new);
 	io_emb_register_callback(type, "free", gds_hash_map_free);
 
 	type = emb_type_get("gds_hash_map_fast");
+	io_emb_register_to_lua_value(type, io_table_to_lua_value);
 	io_emb_register_gds_iterator(type, gds_hash_map_fast_iterator_new);
 	io_emb_register_callback(type, "free", gds_hash_map_fast_free);
 
 	type = emb_type_get("gds_hash_map_keyin");
+	io_emb_register_to_lua_value(type, io_table_to_lua_value);
 	io_emb_register_gds_iterator(type, gds_hash_map_keyin_iterator_new);
 	io_emb_register_callback(type, "free", gds_hash_map_keyin_free);
 
 	type = emb_type_get("gds_hash_map_keyin_fast");
+	io_emb_register_to_lua_value(type, io_table_to_lua_value);
 	io_emb_register_gds_iterator(type,
 		gds_hash_map_keyin_fast_iterator_new);
 	io_emb_register_callback(type, "free", gds_hash_map_keyin_fast_free);
@@ -247,4 +265,3 @@ void io_emb_data_to_lua_value(void **data, io_lua_value_t *lua_value)
 		}
 	}
 }
-

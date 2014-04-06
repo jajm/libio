@@ -31,7 +31,7 @@
 
 static const unsigned long IO_LUA_TABLE_HASH_SIZE = 128;
 
-unsigned long io_lua_table_hash_callback(void **data, unsigned long size)
+static unsigned long io_lua_table_hash_callback(void **data, unsigned long size)
 {
 	unsigned long hash = 0;
 	io_lua_value_t lua_value;
@@ -59,6 +59,12 @@ unsigned long io_lua_table_hash_callback(void **data, unsigned long size)
 			case LUA_VALUE_TYPE_CFUNCTION:
 				hash = (unsigned long) lua_value.value.cfunction;
 				break;
+			case LUA_VALUE_TYPE_LIST:
+				hash = (unsigned long) lua_value.value.list;
+				break;
+			case LUA_VALUE_TYPE_TABLE:
+				hash = (unsigned long) lua_value.value.table;
+				break;
 			case LUA_VALUE_TYPE_LIGHTUSERDATA:
 				hash = (unsigned long) lua_value.value.lightuserdata;
 				break;
@@ -70,7 +76,7 @@ unsigned long io_lua_table_hash_callback(void **data, unsigned long size)
 	return hash % size;
 }
 
-int io_lua_table_cmpkey_callback(void **data1, void **data2)
+static int io_lua_table_cmpkey_callback(void **data1, void **data2)
 {
 	int cmp = 0;
 
@@ -107,6 +113,12 @@ int io_lua_table_cmpkey_callback(void **data1, void **data2)
 					break;
 				case LUA_VALUE_TYPE_CFUNCTION:
 					cmp = v1.value.cfunction - v2.value.cfunction;
+					break;
+				case LUA_VALUE_TYPE_LIST:
+					cmp = v1.value.list - v2.value.list;
+					break;
+				case LUA_VALUE_TYPE_TABLE:
+					cmp = v1.value.table - v2.value.table;
 					break;
 				case LUA_VALUE_TYPE_LIGHTUSERDATA:
 					cmp = v1.value.lightuserdata - v2.value.lightuserdata;
