@@ -35,8 +35,10 @@
 #include "lua_value.h"
 
 struct io_template_s {
-	_Bool data_is_a_filename;
-	char *data;
+	char *start_tag;
+	char *end_tag;
+	char *name;
+	char *code;
 	void **stash;
 	char *last_render;
 };
@@ -51,17 +53,11 @@ void io_initialize(void)
 	}
 }
 
-io_template_t * io_template_new(const char *template)
+io_template_t * io_template_new(const char *start_tag, const char *end_tag)
 {
 	io_template_t *T = NULL;
-	size_t len;
 
 	io_initialize();
-
-	if (template == NULL || template[0] == '\0') {
-		fprintf(stderr, "Template is empty in io_template_new\n");
-		return NULL;
-	}
 
 	T = malloc(sizeof(io_template_t));
 	if (T == NULL) {
@@ -69,34 +65,56 @@ io_template_t * io_template_new(const char *template)
 		return NULL;
 	}
 
-	len = strlen(template);
-	T->data = malloc(sizeof(char) * (len+1));
-	if (T->data == NULL) {
-		fprintf(stderr, "Memory allocation error\n");
-		free(T);
-		return NULL;
-	}
-	strncpy(T->data, template, len+1);
-	T->data_is_a_filename = false;
-	T->last_render = NULL;
+	T->start_tag = sdsnew(start_tag);
+	T->end_tag = sdsnew(end_tag);
 
 	gds_hash_map_t *stash = gds_hash_map_new(128, gds_hash_djb2, strcmp,
 		NULL, emb_container_free, emb_container_free);
 	T->stash = emb_new("gds_hash_map", stash);
 
+	T->name = NULL;
+	T->code = NULL;
+	T->last_render = NULL;
+
 	return T;
 }
 
-io_template_t * io_template_new_from_file(const char *filename)
+const char * io_template_get_start_tag(io_template_t *T)
 {
-	io_template_t *T;
+	return T ? T->start_tag : NULL;
+}
 
-	T = io_template_new(filename);
-	if (T != NULL) {
-		T->data_is_a_filename = true;
+const char * io_template_get_end_tag(io_template_t *T)
+{
+	return T ? T->end_tag : NULL;
+}
+
+int io_template_set_template_string(io_template_t *T, const char *tpl)
+{
+	if (T == NULL) {
+		return -1;
 	}
 
-	return T;
+	sdsfree(T->name);
+	free(T->code);
+	T->name = sdsnew("(Io:main)");
+	T->code = io_compile(tpl, T->start_tag, T->end_tag);
+
+	return 0;
+}
+
+int io_template_set_template_file(io_template_t *T, const char *filename)
+{
+	if (T == NULL) {
+		return -1;
+	}
+
+	sdsfree(T->name);
+	free(T->code);
+	T->name = sdsnew(filename);
+	T->code = io_compile_file(filename, T->start_tag, T->end_tag);
+
+	return 0;
 }
 
 void io_template_param(io_template_t *T, const char *name, void *value)
@@ -227,17 +245,15 @@ const char * io_template_render(io_template_t *T)
 	luaL_openlibs(L);
 	io_require_io(L);
 
+	lua_pushlightuserdata(L, T);
+	lua_setfield(L, LUA_REGISTRYINDEX, "io_template");
+
 	sds output = sdsempty();
 	lua_pushlightuserdata(L, &output);
 	lua_setfield(L, LUA_REGISTRYINDEX, "io_output");
 
-	if (T->data_is_a_filename) {
-		lua_code = io_compile_file(T->data, "#{", "}#");
-		lua_name = T->data;
-	} else {
-		lua_code = io_compile(T->data, "#{", "}#");
-		lua_name = "=(Io:main)";
-	}
+	lua_code = T->code;
+	lua_name = T->name;
 
 	if (luaL_loadbuffer(L, lua_code, strlen(lua_code), lua_name) == LUA_OK) {
 		// stash = ...
@@ -259,8 +275,6 @@ const char * io_template_render(io_template_t *T)
 		fprintf(stderr, "Error: %s\n", lua_tostring(L, -1));
 	}
 
-	free(lua_code);
-
 	len = sdslen(output);
 	free(T->last_render);
 	T->last_render = malloc(sizeof(char) * (len+1));
@@ -275,7 +289,10 @@ const char * io_template_render(io_template_t *T)
 void io_template_free(io_template_t *T)
 {
 	if (T != NULL) {
-		free(T->data);
+		sdsfree(T->start_tag);
+		sdsfree(T->end_tag);
+		sdsfree(T->name);
+		free(T->code);
 		emb_free(T->stash);
 		free(T->last_render);
 		free(T);

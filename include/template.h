@@ -24,11 +24,29 @@ typedef struct io_template_s io_template_t;
 
 io_template_t *
 io_template_new(
-	const char *template
+	const char *start_tag,
+	const char *end_tag
 );
 
-io_template_t *
-io_template_new_from_file(
+const char *
+io_template_get_start_tag(
+	io_template_t *T
+);
+
+const char *
+io_template_get_end_tag(
+	io_template_t *T
+);
+
+int
+io_template_set_template_string(
+	io_template_t *T,
+	const char *tpl
+);
+
+int
+io_template_set_template_file(
+	io_template_t *T,
 	const char *filename
 );
 

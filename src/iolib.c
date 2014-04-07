@@ -29,14 +29,23 @@
 int io_iolib_include(lua_State *L)
 {
 	const char *filename;
+	io_template_t *T;
+	const char *start_tag, *end_tag;
 	char *code;
 	int n;
 	lua_Debug ar;
 
 	n = lua_gettop(L);
 
+	lua_getfield(L, LUA_REGISTRYINDEX, "io_template");
+	T = lua_touserdata(L, -1);
+	lua_pop(L, 1);
+
+	start_tag = io_template_get_start_tag(T);
+	end_tag = io_template_get_end_tag(T);
+
 	filename = lua_tostring(L, 1);
-	code = io_compile_file(filename, "#{", "}#");
+	code = io_compile_file(filename, start_tag, end_tag);
 	if (code != NULL) {
 		int status = luaL_loadbuffer(L, code, strlen(code), filename);
 		if (status == LUA_OK) {

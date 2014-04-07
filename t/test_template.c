@@ -20,7 +20,8 @@ int main()
 
 	plan(3);
 
-	io_template_t *T = io_template_new(tpl);
+	io_template_t *T = io_template_new("#{", "}#");
+	io_template_set_template_string(T, tpl);
 	ok(T != NULL, "T is not NULL");
 	if (T) {
 		io_template_param(T, "name", emb_new("sds", sdsnew("world!")));
@@ -39,7 +40,8 @@ int main()
 		"Table element: #{= mytable.element }#\n"
 		"List: #{ for i,v in ipairs(mylist) do }##{= v .. ',' }##{ end }#\n"
 	;
-	T = io_template_new(tpl2);
+	T = io_template_new("#{", "}#");
+	io_template_set_template_string(T, tpl2);
 	io_template_param(T, "boolean_value", emb_new_bool(true));
 	io_template_param(T, "integer_value", emb_new_int8(127));
 	gds_hash_map_t *table = io_lua_table_new();
