@@ -22,6 +22,7 @@ AC_CONFIG_FILES([
 	include/Makefile
 	t/Makefile
 	config.mk
+	libio.pc
 ])
 
 AC_OUTPUT
