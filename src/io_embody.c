@@ -35,95 +35,46 @@ static void io_bool_to_lua_value(_Bool *data, io_lua_value_t *lua_value)
 	lua_value->value.boolean = *data;
 }
 
-static void io_short_to_lua_value(short *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_INTEGER;
-	lua_value->value.integer = *data;
-}
+#define IO_TO_LUA_VALUE_FUNC(type_name, ctype, luatype, member) \
+	static void io_##type_name##_to_lua_value(ctype *data, io_lua_value_t *value) \
+	{ \
+		value->type = luatype; \
+		value->value.member = *data; \
+	}
 
-static void io_int_to_lua_value(int *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_INTEGER;
-	lua_value->value.integer = *data;
-}
+IO_TO_LUA_VALUE_FUNC(short, short, LUA_VALUE_TYPE_INTEGER, integer)
+IO_TO_LUA_VALUE_FUNC(int, int, LUA_VALUE_TYPE_INTEGER, integer)
+IO_TO_LUA_VALUE_FUNC(long, long, LUA_VALUE_TYPE_INTEGER, integer)
+IO_TO_LUA_VALUE_FUNC(longlong, long long, LUA_VALUE_TYPE_INTEGER, integer)
+IO_TO_LUA_VALUE_FUNC(ushort, unsigned short, LUA_VALUE_TYPE_UNSIGNED, unsignd)
+IO_TO_LUA_VALUE_FUNC(uint, unsigned int, LUA_VALUE_TYPE_UNSIGNED, unsignd)
+IO_TO_LUA_VALUE_FUNC(ulong, unsigned long, LUA_VALUE_TYPE_UNSIGNED, unsignd)
+IO_TO_LUA_VALUE_FUNC(ulonglong, unsigned long long, LUA_VALUE_TYPE_UNSIGNED, unsignd)
 
-static void io_long_to_lua_value(long *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_INTEGER;
-	lua_value->value.integer = *data;
-}
+IO_TO_LUA_VALUE_FUNC(int8, int8_t, LUA_VALUE_TYPE_INTEGER, integer)
+IO_TO_LUA_VALUE_FUNC(int16, int16_t, LUA_VALUE_TYPE_INTEGER, integer)
+IO_TO_LUA_VALUE_FUNC(int32, int32_t, LUA_VALUE_TYPE_INTEGER, integer)
+IO_TO_LUA_VALUE_FUNC(int64, int64_t, LUA_VALUE_TYPE_INTEGER, integer)
+IO_TO_LUA_VALUE_FUNC(uint8, uint8_t, LUA_VALUE_TYPE_UNSIGNED, unsignd)
+IO_TO_LUA_VALUE_FUNC(uint16, uint16_t, LUA_VALUE_TYPE_UNSIGNED, unsignd)
+IO_TO_LUA_VALUE_FUNC(uint32, uint32_t, LUA_VALUE_TYPE_UNSIGNED, unsignd)
+IO_TO_LUA_VALUE_FUNC(uint64, uint64_t, LUA_VALUE_TYPE_UNSIGNED, unsignd)
 
-static void io_longlong_to_lua_value(long long *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_INTEGER;
-	lua_value->value.integer = *data;
-}
+IO_TO_LUA_VALUE_FUNC(float, float, LUA_VALUE_TYPE_NUMBER, number)
+IO_TO_LUA_VALUE_FUNC(double, double, LUA_VALUE_TYPE_NUMBER, number)
+IO_TO_LUA_VALUE_FUNC(longdouble, long double, LUA_VALUE_TYPE_NUMBER, number)
 
-static void io_int8_to_lua_value(int8_t *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_INTEGER;
-	lua_value->value.integer = *data;
-}
+#define IO_PTR_TO_LUA_VALUE_FUNC(type_name, ctype, luatype, member) \
+	static void io_##type_name##_to_lua_value(ctype data, io_lua_value_t *value) \
+	{ \
+		value->type = luatype; \
+		value->value.member = data; \
+	}
 
-static void io_int16_to_lua_value(int16_t *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_INTEGER;
-	lua_value->value.integer = *data;
-}
-
-static void io_int32_to_lua_value(int32_t *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_INTEGER;
-	lua_value->value.integer = *data;
-}
-
-static void io_int64_to_lua_value(int64_t *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_INTEGER;
-	lua_value->value.integer = *data;
-}
-
-static void io_float_to_lua_value(float *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_NUMBER;
-	lua_value->value.number = *data;
-}
-
-static void io_double_to_lua_value(double *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_NUMBER;
-	lua_value->value.number = *data;
-}
-
-static void io_longdouble_to_lua_value(long double *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_NUMBER;
-	lua_value->value.number = *data;
-}
-
-static void io_string_to_lua_value(char *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_STRING;
-	lua_value->value.string = data;
-}
-
-static void io_cfunction_to_lua_value(void *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_CFUNCTION;
-	lua_value->value.cfunction = data;
-}
-
-static void io_list_to_lua_value(void *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_LIST;
-	lua_value->value.list = data;
-}
-
-static void io_table_to_lua_value(void *data, io_lua_value_t *lua_value)
-{
-	lua_value->type = LUA_VALUE_TYPE_TABLE;
-	lua_value->value.table = data;
-}
+IO_PTR_TO_LUA_VALUE_FUNC(string, char *, LUA_VALUE_TYPE_STRING, string);
+IO_PTR_TO_LUA_VALUE_FUNC(cfunction, lua_CFunction, LUA_VALUE_TYPE_CFUNCTION, cfunction);
+IO_PTR_TO_LUA_VALUE_FUNC(list, void *, LUA_VALUE_TYPE_LIST, list);
+IO_PTR_TO_LUA_VALUE_FUNC(table, void *, LUA_VALUE_TYPE_TABLE, table);
 
 static void io_emb_register_callback(emb_type_t *type, const char *name,
 	void *callback)
@@ -146,6 +97,11 @@ static void io_emb_register_gds_iterator(emb_type_t *type, void *callback)
 	io_emb_register_callback(type, "gds_iterator", callback);
 }
 
+static void io_emb_register_free(emb_type_t *type, void *callback)
+{
+	io_emb_register_callback(type, "free", callback);
+}
+
 static void io_emb_initialize_default_types(void)
 {
 	emb_type_t *type;
@@ -165,6 +121,18 @@ static void io_emb_initialize_default_types(void)
 	type = emb_type_get("longlong");
 	io_emb_register_to_lua_value(type, io_longlong_to_lua_value);
 
+	type = emb_type_get("ushort");
+	io_emb_register_to_lua_value(type, io_ushort_to_lua_value);
+
+	type = emb_type_get("uint");
+	io_emb_register_to_lua_value(type, io_uint_to_lua_value);
+
+	type = emb_type_get("ulong");
+	io_emb_register_to_lua_value(type, io_ulong_to_lua_value);
+
+	type = emb_type_get("ulonglong");
+	io_emb_register_to_lua_value(type, io_ulonglong_to_lua_value);
+
 	type = emb_type_get("int8");
 	io_emb_register_to_lua_value(type, io_int8_to_lua_value);
 
@@ -176,6 +144,18 @@ static void io_emb_initialize_default_types(void)
 
 	type = emb_type_get("int64");
 	io_emb_register_to_lua_value(type, io_int64_to_lua_value);
+
+	type = emb_type_get("uint8");
+	io_emb_register_to_lua_value(type, io_uint8_to_lua_value);
+
+	type = emb_type_get("uint16");
+	io_emb_register_to_lua_value(type, io_uint16_to_lua_value);
+
+	type = emb_type_get("uint32");
+	io_emb_register_to_lua_value(type, io_uint32_to_lua_value);
+
+	type = emb_type_get("uint64");
+	io_emb_register_to_lua_value(type, io_uint64_to_lua_value);
 
 	type = emb_type_get("float");
 	io_emb_register_to_lua_value(type, io_float_to_lua_value);
@@ -193,11 +173,11 @@ static void io_emb_initialize_string_types(void)
 
 	type = emb_type_get("sds");
 	io_emb_register_to_lua_value(type, io_string_to_lua_value);
-	io_emb_register_callback(type, "free", sdsfree);
+	io_emb_register_free(type, sdsfree);
 
 	type = emb_type_get("string");
 	io_emb_register_to_lua_value(type, io_string_to_lua_value);
-	io_emb_register_callback(type, "free", free);
+	io_emb_register_free(type, free);
 }
 
 static void io_emb_initialize_lua_types(void)
@@ -215,33 +195,33 @@ static void io_emb_initialize_gds_types(void)
 	type = emb_type_get("gds_slist");
 	io_emb_register_to_lua_value(type, io_list_to_lua_value);
 	io_emb_register_gds_iterator(type, gds_slist_iterator_new);
-	io_emb_register_callback(type, "free", gds_slist_free);
+	io_emb_register_free(type, gds_slist_free);
 
 	type = emb_type_get("gds_dlist");
 	io_emb_register_to_lua_value(type, io_list_to_lua_value);
 	io_emb_register_gds_iterator(type, gds_dlist_iterator_new);
-	io_emb_register_callback(type, "free", gds_dlist_free);
+	io_emb_register_free(type, gds_dlist_free);
 
 	type = emb_type_get("gds_hash_map");
 	io_emb_register_to_lua_value(type, io_table_to_lua_value);
 	io_emb_register_gds_iterator(type, gds_hash_map_iterator_new);
-	io_emb_register_callback(type, "free", gds_hash_map_free);
+	io_emb_register_free(type, gds_hash_map_free);
 
 	type = emb_type_get("gds_hash_map_fast");
 	io_emb_register_to_lua_value(type, io_table_to_lua_value);
 	io_emb_register_gds_iterator(type, gds_hash_map_fast_iterator_new);
-	io_emb_register_callback(type, "free", gds_hash_map_fast_free);
+	io_emb_register_free(type, gds_hash_map_fast_free);
 
 	type = emb_type_get("gds_hash_map_keyin");
 	io_emb_register_to_lua_value(type, io_table_to_lua_value);
 	io_emb_register_gds_iterator(type, gds_hash_map_keyin_iterator_new);
-	io_emb_register_callback(type, "free", gds_hash_map_keyin_free);
+	io_emb_register_free(type, gds_hash_map_keyin_free);
 
 	type = emb_type_get("gds_hash_map_keyin_fast");
 	io_emb_register_to_lua_value(type, io_table_to_lua_value);
 	io_emb_register_gds_iterator(type,
 		gds_hash_map_keyin_fast_iterator_new);
-	io_emb_register_callback(type, "free", gds_hash_map_keyin_fast_free);
+	io_emb_register_free(type, gds_hash_map_keyin_fast_free);
 }
 
 void io_emb_initialize(void)
