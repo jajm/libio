@@ -26,11 +26,34 @@
 #include "template.h"
 #include "compiler.h"
 
+static sds io_iolib_find_file(gds_slist_t *directories, const char *filename)
+{
+	sds filepath = NULL;
+	sds d;
+	FILE *fp;
+
+	gds_slist_foreach(d, directories) {
+		filepath = sdsdup(d);
+		filepath = sdscat(filepath, "/");
+		filepath = sdscat(filepath, filename);
+		fprintf(stderr, "Search for %s\n", filepath);
+		if ( (fp = fopen(filepath, "r")) ) {
+			/* File exists and is readable */
+			fclose(fp);
+			break;
+		}
+		sdsfree(filepath);
+	}
+
+	return filepath;
+}
+
 int io_iolib_include(lua_State *L)
 {
 	const char *filename;
+	sds filepath;
 	io_template_t *T;
-	const char *start_tag, *end_tag;
+	io_config_t *config;
 	char *code;
 	int n;
 	lua_Debug ar;
@@ -41,11 +64,16 @@ int io_iolib_include(lua_State *L)
 	T = lua_touserdata(L, -1);
 	lua_pop(L, 1);
 
-	start_tag = io_template_get_start_tag(T);
-	end_tag = io_template_get_end_tag(T);
+	config = io_template_get_config(T);
 
 	filename = lua_tostring(L, 1);
-	code = io_compile_file(filename, start_tag, end_tag);
+	filepath = io_iolib_find_file(config->directories, filename);
+	if (filepath == NULL) {
+		fprintf(stderr, "File %s not found\n", filename);
+		return -1;
+	}
+
+	code = io_compile_file(filepath, config->start_tag, config->end_tag);
 	if (code != NULL) {
 		int status = luaL_loadbuffer(L, code, strlen(code), filename);
 		if (status == LUA_OK) {
@@ -67,6 +95,7 @@ int io_iolib_include(lua_State *L)
 		}
 		free(code);
 	}
+	sdsfree(filepath);
 
 	return 0;
 }

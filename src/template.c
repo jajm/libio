@@ -82,14 +82,9 @@ io_template_t * io_template_new(io_config_t *config)
 	return T;
 }
 
-const char * io_template_get_start_tag(io_template_t *T)
+io_config_t * io_template_get_config(io_template_t *T)
 {
-	return T ? T->config->start_tag : NULL;
-}
-
-const char * io_template_get_end_tag(io_template_t *T)
-{
-	return T ? T->config->end_tag : NULL;
+	return T ? T->config : NULL;
 }
 
 int io_template_set_template_string(io_template_t *T, const char *tpl)

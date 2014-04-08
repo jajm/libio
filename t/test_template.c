@@ -1,3 +1,4 @@
+#include <libgen.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -6,21 +7,37 @@
 #include <sds.h>
 #include "lua_table.h"
 #include "template.h"
+#include "io_config.h"
 #include "tap.h"
 
-int main()
+int main(int argc, char **argv)
 {
+	sds progname;
+	const char *progdir;
+	io_config_t *config;
 	const char *out;
 	static const char *tpl =
 		"Hello, #{= name }# #{\n"
 		"	name2 = string.gsub(name, \"!\", \"?\")\n"
 		"}#\n"
-		"#{ Io.include('t/files/test.inc') }#\n"
+		"#{ Io.include('test.inc') }#\n"
 		"Hello again, #{= name2:upper() }#\n";
 
 	plan(3);
 
-	io_template_t *T = io_template_new(NULL);
+	if (argc) {
+		sds path;
+		progname = sdsnew(argv[0]);
+		progdir = dirname(progname);
+		config = io_config_new();
+		path = sdsnew(progdir);
+		/* progdir looks like "/path/to/libio/t/.libs" */
+		path = sdscat(path, "/../files");
+		gds_slist_unshift(config->directories, path);
+		sdsfree(progname);
+	}
+
+	io_template_t *T = io_template_new(config);
 	io_template_set_template_string(T, tpl);
 	ok(T != NULL, "T is not NULL");
 	if (T) {

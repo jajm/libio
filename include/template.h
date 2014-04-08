@@ -29,13 +29,8 @@ io_template_new(
 	io_config_t *config
 );
 
-const char *
-io_template_get_start_tag(
-	io_template_t *T
-);
-
-const char *
-io_template_get_end_tag(
+io_config_t *
+io_template_get_config(
 	io_template_t *T
 );
 
