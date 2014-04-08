@@ -20,7 +20,7 @@ int main()
 
 	plan(3);
 
-	io_template_t *T = io_template_new("#{", "}#");
+	io_template_t *T = io_template_new(NULL);
 	io_template_set_template_string(T, tpl);
 	ok(T != NULL, "T is not NULL");
 	if (T) {
@@ -40,7 +40,7 @@ int main()
 		"Table element: #{= mytable.element }#\n"
 		"List: #{ for i,v in ipairs(mylist) do }##{= v .. ',' }##{ end }#\n"
 	;
-	T = io_template_new("#{", "}#");
+	T = io_template_new(NULL);
 	io_template_set_template_string(T, tpl2);
 	io_template_param(T, "boolean_value", emb_new_bool(true));
 	io_template_param(T, "integer_value", emb_new_int8(127));

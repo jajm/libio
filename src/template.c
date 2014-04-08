@@ -33,10 +33,10 @@
 #include "template.h"
 #include "io_embody.h"
 #include "lua_value.h"
+#include "io_config.h"
 
 struct io_template_s {
-	char *start_tag;
-	char *end_tag;
+	io_config_t *config;
 	char *name;
 	char *code;
 	void **stash;
@@ -53,7 +53,7 @@ void io_initialize(void)
 	}
 }
 
-io_template_t * io_template_new(const char *start_tag, const char *end_tag)
+io_template_t * io_template_new(io_config_t *config)
 {
 	io_template_t *T = NULL;
 
@@ -65,8 +65,11 @@ io_template_t * io_template_new(const char *start_tag, const char *end_tag)
 		return NULL;
 	}
 
-	T->start_tag = sdsnew(start_tag);
-	T->end_tag = sdsnew(end_tag);
+	if (config) {
+		T->config = config;
+	} else {
+		T->config = io_config_new();
+	}
 
 	gds_hash_map_t *stash = gds_hash_map_new(128, gds_hash_djb2, strcmp,
 		NULL, emb_container_free, emb_container_free);
@@ -81,12 +84,12 @@ io_template_t * io_template_new(const char *start_tag, const char *end_tag)
 
 const char * io_template_get_start_tag(io_template_t *T)
 {
-	return T ? T->start_tag : NULL;
+	return T ? T->config->start_tag : NULL;
 }
 
 const char * io_template_get_end_tag(io_template_t *T)
 {
-	return T ? T->end_tag : NULL;
+	return T ? T->config->end_tag : NULL;
 }
 
 int io_template_set_template_string(io_template_t *T, const char *tpl)
@@ -98,7 +101,7 @@ int io_template_set_template_string(io_template_t *T, const char *tpl)
 	sdsfree(T->name);
 	free(T->code);
 	T->name = sdsnew("(Io:main)");
-	T->code = io_compile(tpl, T->start_tag, T->end_tag);
+	T->code = io_compile(tpl, T->config->start_tag, T->config->end_tag);
 
 	return 0;
 }
@@ -112,7 +115,8 @@ int io_template_set_template_file(io_template_t *T, const char *filename)
 	sdsfree(T->name);
 	free(T->code);
 	T->name = sdsnew(filename);
-	T->code = io_compile_file(filename, T->start_tag, T->end_tag);
+	T->code = io_compile_file(filename, T->config->start_tag,
+		T->config->end_tag);
 
 	return 0;
 }
@@ -289,8 +293,7 @@ const char * io_template_render(io_template_t *T)
 void io_template_free(io_template_t *T)
 {
 	if (T != NULL) {
-		sdsfree(T->start_tag);
-		sdsfree(T->end_tag);
+		io_config_free(T->config);
 		sdsfree(T->name);
 		free(T->code);
 		emb_free(T->stash);

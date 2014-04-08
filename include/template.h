@@ -20,12 +20,13 @@
 #ifndef libio_template_h_included
 #define libio_template_h_included
 
+#include "io_config.h"
+
 typedef struct io_template_s io_template_t;
 
 io_template_t *
 io_template_new(
-	const char *start_tag,
-	const char *end_tag
+	io_config_t *config
 );
 
 const char *
