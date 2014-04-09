@@ -28,7 +28,8 @@ enum io_compile_mode {
 	IO_COMPILE_MODE_LUA,
 	IO_COMPILE_MODE_LUA_EXPR,
 	IO_COMPILE_MODE_STRING_SINGLE,
-	IO_COMPILE_MODE_STRING_DOUBLE
+	IO_COMPILE_MODE_STRING_DOUBLE,
+	IO_COMPILE_MODE_STRING_MULTILINE
 };
 
 char * io_compile(const char *template, const char *start_tag,
@@ -43,6 +44,7 @@ char * io_compile(const char *template, const char *start_tag,
 	size_t start_tag_len = strlen(start_tag);
 	size_t end_tag_len = strlen(end_tag);
 	size_t len;
+	unsigned int n_equals = 0; // Number of equals signs in multiline string
 
 	while (*ptr != '\0') {
 		if (mode == IO_COMPILE_MODE_TEXT && *ptr == '\n') {
@@ -73,6 +75,21 @@ char * io_compile(const char *template, const char *start_tag,
 		} else if (mode == IO_COMPILE_MODE_STRING_SINGLE && *ptr == '\'' && *(ptr-1) != '\\') {
 			mode = previous_mode;
 			buf = sdscat(buf, "'");
+		} else if ((mode == IO_COMPILE_MODE_LUA || mode == IO_COMPILE_MODE_LUA_EXPR) && *ptr == '[') {
+			n_equals = 0;
+			while (*(ptr+n_equals+1) == '=') n_equals++;
+			if (*(ptr+n_equals+1) == '[') {
+				previous_mode = mode;
+				mode = IO_COMPILE_MODE_STRING_MULTILINE;
+			}
+			buf = sdscat(buf, "[");
+		} else if (mode == IO_COMPILE_MODE_STRING_MULTILINE && *ptr == ']') {
+			unsigned int n_equals_count = 0;
+			while (*(ptr+n_equals_count+1) == '=') n_equals_count++;
+			if (n_equals_count == n_equals && *(ptr+n_equals+1) == ']') {
+				mode = previous_mode;
+			}
+			buf = sdscat(buf, "]");
 		} else if (mode == IO_COMPILE_MODE_LUA && strncmp(ptr, end_tag, end_tag_len) == 0) {
 			buf = sdscat(buf, "Io.output(\"");
 			mode = IO_COMPILE_MODE_TEXT;

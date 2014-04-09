@@ -93,6 +93,10 @@ void test_end_tag_in_string(void)
 	const char *expected3 = "\"}#\"";
 	const char *tpl4 = "#{ Io.output('\\'}#\\'') }#";
 	const char *expected4 = "'}#'";
+	const char *tpl5 = "#{= [[ }# ]] }#";
+	const char *expected5 = " }# ";
+	const char *tpl6 = "#{= [====[ }# ]====] }#";
+	const char *expected6 = " }# ";
 
 	T = io_template_new(NULL);
 	io_template_set_template_string(T, tpl);
@@ -111,12 +115,20 @@ void test_end_tag_in_string(void)
 	out = io_template_render(T);
 	ok(!strcmp(out, expected4), "end tag in single quoted string with escaped single quotes");
 
+	io_template_set_template_string(T, tpl5);
+	out = io_template_render(T);
+	ok(!strcmp(out, expected5), "end tag in multiline quoted string");
+
+	io_template_set_template_string(T, tpl6);
+	out = io_template_render(T);
+	ok(!strcmp(out, expected6), "end tag in multiline quoted string (with equal signs)");
+
 	io_template_free(T);
 }
 
 int main(int argc, char **argv)
 {
-	plan(6);
+	plan(8);
 
 	test_include(argc, argv);
 	test_types();
