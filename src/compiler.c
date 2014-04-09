@@ -26,7 +26,9 @@
 enum io_compile_mode {
 	IO_COMPILE_MODE_TEXT,
 	IO_COMPILE_MODE_LUA,
-	IO_COMPILE_MODE_LUA_EXPR
+	IO_COMPILE_MODE_LUA_EXPR,
+	IO_COMPILE_MODE_STRING_SINGLE,
+	IO_COMPILE_MODE_STRING_DOUBLE
 };
 
 char * io_compile(const char *template, const char *start_tag,
@@ -37,6 +39,7 @@ char * io_compile(const char *template, const char *start_tag,
 	char *out;
 	const char *ptr = template;
 	enum io_compile_mode mode = IO_COMPILE_MODE_TEXT;
+	enum io_compile_mode previous_mode = IO_COMPILE_MODE_TEXT;
 	size_t start_tag_len = strlen(start_tag);
 	size_t end_tag_len = strlen(end_tag);
 	size_t len;
@@ -56,6 +59,20 @@ char * io_compile(const char *template, const char *start_tag,
 				mode = IO_COMPILE_MODE_LUA;
 				ptr += start_tag_len - 1;
 			}
+		} else if ((mode == IO_COMPILE_MODE_LUA || mode == IO_COMPILE_MODE_LUA_EXPR) && *ptr == '"') {
+			previous_mode = mode;
+			mode = IO_COMPILE_MODE_STRING_DOUBLE;
+			buf = sdscat(buf, "\"");
+		} else if (mode == IO_COMPILE_MODE_STRING_DOUBLE && *ptr == '"' && *(ptr-1) != '\\') {
+			mode = previous_mode;
+			buf = sdscat(buf, "\"");
+		} else if ((mode == IO_COMPILE_MODE_LUA || mode == IO_COMPILE_MODE_LUA_EXPR) && *ptr == '\'') {
+			previous_mode = mode;
+			mode = IO_COMPILE_MODE_STRING_SINGLE;
+			buf = sdscat(buf, "'");
+		} else if (mode == IO_COMPILE_MODE_STRING_SINGLE && *ptr == '\'' && *(ptr-1) != '\\') {
+			mode = previous_mode;
+			buf = sdscat(buf, "'");
 		} else if (mode == IO_COMPILE_MODE_LUA && strncmp(ptr, end_tag, end_tag_len) == 0) {
 			buf = sdscat(buf, "Io.output(\"");
 			mode = IO_COMPILE_MODE_TEXT;
