@@ -75,4 +75,6 @@ int main(int argc, char **argv)
 		"List: 1,2,3,\n"
 	), "output of tpl2 is ok");
 	io_template_free(T);
+
+	io_config_free(config);
 }

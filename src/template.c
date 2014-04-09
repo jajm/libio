@@ -30,24 +30,20 @@
 #include <libgends/hash_functions.h>
 #include "iolib.h"
 #include "compiler.h"
-#include "template.h"
 #include "io_embody.h"
 #include "lua_value.h"
 #include "io_config.h"
+#include "io_template_private.h"
+#include "template.h"
 
-struct io_template_s {
-	io_config_t *config;
-	char *name;
-	char *code;
-	void **stash;
-	char *last_render;
-};
+static io_config_t *io_default_config = NULL;
 
 static int io_initialized = 0;
 void io_initialize(void)
 {
 	if (!io_initialized) {
 		io_emb_initialize();
+		io_default_config = io_config_new();
 
 		io_initialized = 1;
 	}
@@ -68,7 +64,7 @@ io_template_t * io_template_new(io_config_t *config)
 	if (config) {
 		T->config = config;
 	} else {
-		T->config = io_config_new();
+		T->config = io_default_config;
 	}
 
 	gds_hash_map_t *stash = gds_hash_map_new(128, gds_hash_djb2, strcmp,
@@ -288,7 +284,6 @@ const char * io_template_render(io_template_t *T)
 void io_template_free(io_template_t *T)
 {
 	if (T != NULL) {
-		io_config_free(T->config);
 		sdsfree(T->name);
 		free(T->code);
 		emb_free(T->stash);
