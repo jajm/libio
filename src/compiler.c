@@ -36,16 +36,13 @@ static const char * io_compile_string_single(const char *ptr,
 	io_compile_context_t *context)
 {
 	sds *buf = &(context->buffer);
+	const char *tmp = ptr;
 
-	while (*ptr) {
-		if (*ptr == '\'' && *(ptr - 1) != '\\') {
-			*buf = sdscat(*buf, "'");
-			break;
-		} else {
-			*buf = sdscatlen(*buf, ptr, 1);
-		}
-		ptr++;
+	ptr = strchr(tmp, '\'');
+	while (ptr && *(ptr - 1) == '\\') {
+		ptr = strchr(ptr + 1, '\'');
 	}
+	*buf = sdscatlen(*buf, tmp, ptr - tmp + 1);
 
 	return ptr;
 }
@@ -54,16 +51,13 @@ static const char * io_compile_string_double(const char *ptr,
 	io_compile_context_t *context)
 {
 	sds *buf = &(context->buffer);
+	const char *tmp = ptr;
 
-	while (*ptr) {
-		if (*ptr == '"' && *(ptr - 1) != '\\') {
-			*buf = sdscat(*buf, "\"");
-			break;
-		} else {
-			*buf = sdscatlen(*buf, ptr, 1);
-		}
-		ptr++;
+	ptr = strchr(ptr, '"');
+	while (ptr && *(ptr - 1) == '\\') {
+		ptr = strchr(ptr + 1, '"');
 	}
+	*buf = sdscatlen(*buf, tmp, ptr - tmp + 1);
 
 	return ptr;
 }
@@ -73,26 +67,21 @@ static const char * io_compile_string_multiline(const char *ptr,
 {
 	sds *buf = &(context->buffer);
 	unsigned int n_equals = context->multiline_equal_signs_count;
-	unsigned int n_equals_count;
+	char *multi_end_tag;
+	const char *tmp = ptr;
 
-	while (*ptr) {
-		if (*ptr == ']') {
-			n_equals_count = 0;
-			while (*(ptr + n_equals_count + 1) == '=') {
-				n_equals_count++;
-			}
+	multi_end_tag = malloc(sizeof(char) * (n_equals + 3));
+	multi_end_tag[0] = ']';
+	memset(multi_end_tag + 1, '=', n_equals);
+	multi_end_tag[n_equals + 1] = ']';
+	multi_end_tag[n_equals + 2] = '\0';
 
-			if (n_equals_count == n_equals && *(ptr + n_equals + 1) == ']') {
-				*buf = sdscatlen(*buf, ptr, n_equals + 2);
-				ptr += n_equals + 1;
-				break;
-			} else {
-				*buf = sdscat(*buf, "]");
-			}
-		} else {
-			*buf = sdscatlen(*buf, ptr, 1);
-		}
-		ptr++;
+	ptr = strstr(ptr, multi_end_tag);
+	if (ptr) {
+		ptr += n_equals + 1;
+		*buf = sdscatlen(*buf, tmp, ptr - tmp + 1);
+	} else {
+		*buf = sdscat(*buf, tmp);
 	}
 
 	return ptr;
