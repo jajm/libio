@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Julian Maurice
+ * Copyright 2013-2014 Julian Maurice
  *
  * This file is part of libio
  *
@@ -17,29 +17,31 @@
  * along with libio.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef libio_compiler_h_included
-#define libio_compiler_h_included
+#ifndef libio_parser_h_included
+#define libio_parser_h_included
 
-char *
-io_compile(
+#include <sds.h>
+
+sds
+io_parser_parse(
 	const char *template,
 	const char *start_tag,
 	const char *end_tag
 );
 
-char *
-io_compile_filep(
+sds
+io_parser_parse_filep(
 	FILE *filep,
 	const char *start_tag,
 	const char *end_tag
 );
 
-char *
-io_compile_file(
+sds
+io_parser_parse_file(
 	const char *filename,
 	const char *start_tag,
 	const char *end_tag
 );
 
-#endif /* ! libio_compiler_h_included */
+#endif /* ! libio_parser_h_included */
 

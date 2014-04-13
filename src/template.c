@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Julian Maurice
+ * Copyright 2013-2014 Julian Maurice
  *
  * This file is part of libio
  *
@@ -29,7 +29,7 @@
 #include <libgends/hash_map.h>
 #include <libgends/hash_functions.h>
 #include "iolib.h"
-#include "compiler.h"
+#include "io_parser.h"
 #include "io_embody.h"
 #include "lua_value.h"
 #include "io_config.h"
@@ -90,9 +90,9 @@ int io_template_set_template_string(io_template_t *T, const char *tpl)
 	}
 
 	sdsfree(T->name);
-	free(T->code);
+	sdsfree(T->code);
 	T->name = sdsnew("(Io:main)");
-	T->code = io_compile(tpl, T->config->start_tag, T->config->end_tag);
+	T->code = io_parser_parse(tpl, T->config->start_tag, T->config->end_tag);
 
 	return 0;
 }
@@ -104,9 +104,9 @@ int io_template_set_template_file(io_template_t *T, const char *filename)
 	}
 
 	sdsfree(T->name);
-	free(T->code);
+	sdsfree(T->code);
 	T->name = sdsnew(filename);
-	T->code = io_compile_file(filename, T->config->start_tag,
+	T->code = io_parser_parse_file(filename, T->config->start_tag,
 		T->config->end_tag);
 
 	return 0;
@@ -285,7 +285,7 @@ void io_template_free(io_template_t *T)
 {
 	if (T != NULL) {
 		sdsfree(T->name);
-		free(T->code);
+		sdsfree(T->code);
 		emb_free(T->stash);
 		free(T->last_render);
 		free(T);

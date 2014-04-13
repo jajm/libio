@@ -23,7 +23,7 @@
 struct io_template_s {
 	io_config_t *config;
 	char *name;
-	char *code;
+	sds code;
 	void **stash;
 	char *last_render;
 };

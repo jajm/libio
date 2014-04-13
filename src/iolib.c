@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Julian Maurice
+ * Copyright 2013-2014 Julian Maurice
  *
  * This file is part of libio
  *
@@ -24,7 +24,6 @@
 #include <lauxlib.h>
 #include <sds.h>
 #include "template.h"
-#include "compiler.h"
 #include "io_template_private.h"
 
 static sds io_iolib_find_file(gds_slist_t *directories, const char *filename)
