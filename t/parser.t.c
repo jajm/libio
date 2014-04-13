@@ -4,48 +4,42 @@
 #include <libtap13/tap.h>
 #include "io_parser.h"
 
-static void test_simple_text(void)
+static void test_parser_parse(const char *tpl, const char *exp, const char *msg)
 {
-	const char *tpl1 = "foo bar baz";
-	const char *exp1 = "Io.output(\"foo\");Io.output(\" \");"
-		"Io.output(\"bar\");Io.output(\" \");"
-		"Io.output(\"baz\");";
 	sds code;
 
-	code = io_parser_parse(tpl1, "#{", "}#");
+	code = io_parser_parse(tpl, "#{", "}#");
 	if (code) {
-		ok(!strcmp(code, exp1), "output is ok");
+		str_eq(code, exp, msg);
 	}
 
 	sdsfree(code);
+}
+
+static void test_simple_text(void)
+{
+	const char *tpl = "foo bar baz";
+	const char *exp = "Io.output(\"foo\");Io.output(\" \");"
+		"Io.output(\"bar\");Io.output(\" \");"
+		"Io.output(\"baz\");";
+
+	test_parser_parse(tpl, exp, __func__);
 }
 
 static void test_simple_expr(void)
 {
-	const char *tpl1 = "#{= \"bar baz\" }#";
-	const char *exp1 = "Io.output( \"bar baz\" );";
-	sds code;
+	const char *tpl = "#{= \"bar baz\" }#";
+	const char *exp = "Io.output( \"bar baz\" );";
 
-	code = io_parser_parse(tpl1, "#{", "}#");
-	if (code) {
-		ok(!strcmp(code, exp1), "output is ok");
-	}
-
-	sdsfree(code);
+	test_parser_parse(tpl, exp, __func__);
 }
 
 static void test_unterminated_string(void)
 {
-	const char *tpl1 = "#{= 'foo";
-	const char *exp1 = "Io.output( 'foo);";
-	sds code;
+	const char *tpl = "#{= 'foo";
+	const char *exp = "Io.output( 'foo);";
 
-	code = io_parser_parse(tpl1, "#{", "}#");
-	if (code) {
-		ok(!strcmp(code, exp1), "output is ok");
-	}
-
-	sdsfree(code);
+	test_parser_parse(tpl, exp, __func__);
 }
 
 int main()
