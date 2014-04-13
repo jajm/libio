@@ -4,6 +4,11 @@ PKGCONFIG_FILES := $(wildcard *.pc)
 
 .PHONY: src test clean
 
+TARGETS := lib
+ifeq "$(BUILD_TESTS)" "yes"
+TARGETS := $(TARGETS) test
+endif
+
 all: lib test
 
 lib:

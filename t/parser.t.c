@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sds.h>
-#include "tap.h"
+#include <libtap13/tap.h>
 #include "io_parser.h"
 
 static void test_simple_text(void)

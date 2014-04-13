@@ -15,3 +15,5 @@ pkgconfigdir := $(libdir)/pkgconfig
 LIBDIR := $(DESTDIR)$(libdir)
 INCLUDEDIR := $(DESTDIR)$(includedir)
 PKGCONFIGDIR := $(DESTDIR)$(pkgconfigdir)
+
+BUILD_TESTS := @BUILD_TESTS@
