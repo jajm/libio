@@ -84,9 +84,79 @@ static void test_unterminated_string(void)
 	test_parser_parse(tpl, exp, __func__);
 }
 
+static void test_pre_chomp_one(void)
+{
+	const char *tpl = "foo\n"
+		"  \n"
+		"\t  #{-= 'foo' }#";
+	const char *exp = to_s( Io.output("foo");Io.output("\n"); ) "\n"
+		to_s( Io.output("  "); ) "\n"
+		"\t  Io.output( 'foo' );";
+
+	test_parser_parse(tpl, exp, __func__);
+}
+
+static void test_post_chomp_one(void)
+{
+	const char *tpl = "#{= 'foo' -}#   \n"
+		"  bar";
+	const char *exp = "Io.output( 'foo' );   \n"
+		to_s( Io.output("  ");Io.output("bar"); );
+
+	test_parser_parse(tpl, exp, __func__);
+}
+
+static void test_pre_chomp_collapse(void)
+{
+	const char *tpl = "foo\n"
+		"  \n"
+		"\t  #{:= 'foo' }#";
+	const char *exp = to_s( Io.output("foo"); ) "\n"
+		"  \n"
+		"\t  Io.output(\" \");Io.output( 'foo' );";
+
+	test_parser_parse(tpl, exp, __func__);
+}
+
+static void test_post_chomp_collapse(void)
+{
+	const char *tpl = "#{= 'foo' :}#  \n"
+		"  \n"
+		"\t  bar";
+	const char *exp = "Io.output( 'foo' );Io.output(\" \");  \n"
+		"  \n"
+		"\t  Io.output(\"bar\");";
+
+	test_parser_parse(tpl, exp, __func__);
+}
+
+static void test_pre_chomp_greedy(void)
+{
+	const char *tpl = "foo\n"
+		"  \n"
+		"\t  #{~= 'foo' }#";
+	const char *exp = to_s( Io.output("foo"); ) "\n"
+		"  \n"
+		"\t  Io.output( 'foo' );";
+
+	test_parser_parse(tpl, exp, __func__);
+}
+
+static void test_post_chomp_greedy(void)
+{
+	const char *tpl = "#{= 'foo' ~}#  \n"
+		"  \n"
+		"\t  bar";
+	const char *exp = "Io.output( 'foo' );  \n"
+		"  \n"
+		"\t  Io.output(\"bar\");";
+
+	test_parser_parse(tpl, exp, __func__);
+}
+
 int main()
 {
-	plan(6);
+	plan(12);
 
 	test_simple_text();
 	test_simple_expr();
@@ -94,6 +164,13 @@ int main()
 	test_simple_text_with_quotes();
 	test_newlines();
 	test_unterminated_string();
+
+	test_pre_chomp_one();
+	test_post_chomp_one();
+	test_pre_chomp_collapse();
+	test_post_chomp_collapse();
+	test_pre_chomp_greedy();
+	test_post_chomp_greedy();
 
 	return 0;
 }
