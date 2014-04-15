@@ -459,7 +459,7 @@ sds io_parser_parse_filep(FILE *filep, const char *start_tag, const char *end_ta
 	return out;
 }
 
-char * io_parser_parse_file(const char *filename, const char *start_tag,
+sds io_parser_parse_file(const char *filename, const char *start_tag,
 	const char *end_tag)
 {
 	FILE *fp;
