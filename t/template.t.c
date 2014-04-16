@@ -6,8 +6,8 @@
 #include <embody/embody.h>
 #include <sds.h>
 #include <libtap13/tap.h>
-#include "lua_table.h"
-#include "template.h"
+#include "io_lua_table.h"
+#include "io_template.h"
 #include "io_config.h"
 
 static void test_include(int argc, char **argv)

@@ -23,7 +23,7 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <sds.h>
-#include "template.h"
+#include "io_template.h"
 #include "io_template_private.h"
 
 static sds io_iolib_find_file(gds_slist_t *directories, const char *filename)

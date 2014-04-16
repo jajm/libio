@@ -19,7 +19,7 @@ $(LIBRARY_NAME): $(OBJS)
 .deps/%.d: %.c
 	@set -e; rm -f $@; \
 	mkdir -p $(dir $@); \
-	$(CC) -MM -MG -MT '$(<:.c=.lo) $@' -MF $@ $(CPPFLAGS) $<
+	$(CC) -MM -MT '$(<:.c=.lo) $@' -MF $@ $(CPPFLAGS) $<
 
 -include $(patsubst %.c,.deps/%.d,$(SOURCES))
 

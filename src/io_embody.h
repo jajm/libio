@@ -20,7 +20,7 @@
 #ifndef io_embody_h_included
 #define io_embody_h_included
 
-#include "lua_value.h"
+#include "io_lua_value.h"
 
 void io_emb_initialize(void);
 

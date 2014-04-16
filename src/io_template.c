@@ -28,13 +28,13 @@
 #include <embody/embody.h>
 #include <libgends/hash_map.h>
 #include <libgends/hash_functions.h>
-#include "iolib.h"
+#include "io_iolib.h"
 #include "io_parser.h"
 #include "io_embody.h"
-#include "lua_value.h"
+#include "io_lua_value.h"
 #include "io_config.h"
 #include "io_template_private.h"
-#include "template.h"
+#include "io_template.h"
 
 static io_config_t *io_default_config = NULL;
 

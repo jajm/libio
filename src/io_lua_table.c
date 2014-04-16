@@ -25,8 +25,8 @@
 #include <libgends/hash_functions.h>
 #include <embody/embody.h>
 #include <sds.h>
-#include "lua_value.h"
-#include "lua_table.h"
+#include "io_lua_value.h"
+#include "io_lua_table.h"
 #include "io_embody.h"
 
 static const unsigned long IO_LUA_TABLE_HASH_SIZE = 128;

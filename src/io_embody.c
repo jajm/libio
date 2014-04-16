@@ -27,7 +27,7 @@
 #include <sds.h>
 #include <embody/embody.h>
 #include <lua.h>
-#include "lua_value.h"
+#include "io_lua_value.h"
 
 static void io_bool_to_lua_value(_Bool *data, io_lua_value_t *lua_value)
 {
