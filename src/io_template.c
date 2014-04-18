@@ -28,6 +28,7 @@
 #include <embody/embody.h>
 #include <libgends/hash_map.h>
 #include <libgends/hash_functions.h>
+#include "io_globals.h"
 #include "io_iolib.h"
 #include "io_parser.h"
 #include "io_embody.h"
@@ -36,24 +37,9 @@
 #include "io_template_private.h"
 #include "io_template.h"
 
-static io_config_t *io_default_config = NULL;
-
-static int io_initialized = 0;
-void io_initialize(void)
-{
-	if (!io_initialized) {
-		io_emb_initialize();
-		io_default_config = io_config_new_default();
-
-		io_initialized = 1;
-	}
-}
-
 io_template_t * io_template_new(io_config_t *config)
 {
 	io_template_t *T = NULL;
-
-	io_initialize();
 
 	T = malloc(sizeof(io_template_t));
 	if (T == NULL) {
@@ -64,7 +50,7 @@ io_template_t * io_template_new(io_config_t *config)
 	if (config) {
 		T->config = config;
 	} else {
-		T->config = io_default_config;
+		T->config = io_globals_get_default_config();
 	}
 
 	gds_hash_map_t *stash = gds_hash_map_new(128, gds_hash_djb2, strcmp,

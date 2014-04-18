@@ -6,9 +6,7 @@
 #include <embody/embody.h>
 #include <sds.h>
 #include <libtap13/tap.h>
-#include "io_lua_table.h"
-#include "io_template.h"
-#include "io_config.h"
+#include "io.h"
 
 static void test_include(int argc, char **argv)
 {
@@ -130,9 +128,13 @@ int main(int argc, char **argv)
 {
 	plan(8);
 
+	io_initialize();
+
 	test_include(argc, argv);
 	test_types();
 	test_end_tag_in_string();
+
+	io_finalize();
 
 	return 0;
 }
