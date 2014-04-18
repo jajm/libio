@@ -292,37 +292,27 @@ static void io_parser_lua_token_set_chomps(io_token_t *token,
 	io_chomp_type_t *pre, io_chomp_type_t *post)
 {
 	const char *ptr;
-	int done = 0;
-	int pre_flags = -1, post_flags = -1;
+	int pre_flag = 1, post_flag = 1;
 
 	ptr = token->value;
-	while (*ptr && !done) {
-		switch (*ptr) {
-			case '+': *pre = IO_CHOMP_NONE; break;
-			case '-': *pre = IO_CHOMP_ONE; break;
-			case ':': *pre = IO_CHOMP_COLLAPSE; break;
-			case '~': *pre = IO_CHOMP_GREEDY; break;
-			default:  done = 1;
-		}
-		pre_flags++;
-		ptr++;
+	switch (*ptr) {
+		case '+': *pre = IO_CHOMP_NONE; break;
+		case '-': *pre = IO_CHOMP_ONE; break;
+		case ':': *pre = IO_CHOMP_COLLAPSE; break;
+		case '~': *pre = IO_CHOMP_GREEDY; break;
+		default: pre_flag = 0;
 	}
 
-	done = 0;
 	ptr = token->value + sdslen(token->value) - 1;
-	while (*ptr && !done) {
-		switch (*ptr) {
-			case '+': *post = IO_CHOMP_NONE; break;
-			case '-': *post = IO_CHOMP_ONE; break;
-			case ':': *post = IO_CHOMP_COLLAPSE; break;
-			case '~': *post = IO_CHOMP_GREEDY; break;
-			default:  done = 1;
-		}
-		post_flags++;
-		ptr--;
+	switch (*ptr) {
+		case '+': *post = IO_CHOMP_NONE; break;
+		case '-': *post = IO_CHOMP_ONE; break;
+		case ':': *post = IO_CHOMP_COLLAPSE; break;
+		case '~': *post = IO_CHOMP_GREEDY; break;
+		default: post_flag = 0;
 	}
 
-	sdsrange(token->value, pre_flags, -(post_flags + 1));
+	sdsrange(token->value, pre_flag, -(post_flag + 1));
 }
 
 static void io_parser_lua_token_pre_chomp(io_token_t *token,
