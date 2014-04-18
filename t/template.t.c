@@ -17,17 +17,17 @@ static void test_include(int argc, char **argv)
 	io_config_t *config;
 	const char *out;
 	static const char *tpl =
-		"Hello, #{= name }# #{\n"
+		"Hello, {{ name }} {%\n"
 		"	name2 = string.gsub(name, \"!\", \"?\")\n"
-		"}#\n"
-		"#{ Io.include('test.inc') }#\n"
-		"Hello again, #{= name2:upper() }#\n";
+		"%}\n"
+		"{% Io.include('test.inc') %}\n"
+		"Hello again, {{ name2:upper() }}\n";
 
 	if (argc) {
 		sds path;
 		progname = sdsnew(argv[0]);
 		progdir = dirname(progname);
-		config = io_config_new();
+		config = io_config_new_default();
 		path = sdsnew(progdir);
 		/* progdir looks like "/path/to/libio/t/.libs" */
 		path = sdscat(path, "/../files");
@@ -55,10 +55,10 @@ static void test_types(void)
 	io_template_t *T;
 	const char *out;
 	const char *tpl =
-		"Boolean: #{= boolean_value }#\n"
-		"Integer: #{= integer_value }#\n"
-		"Table element: #{= mytable.element }#\n"
-		"List: #{ for i,v in ipairs(mylist) do }##{= v .. ',' }##{ end }#\n"
+		"Boolean: {{ boolean_value }}\n"
+		"Integer: {{ integer_value }}\n"
+		"Table element: {{ mytable.element }}\n"
+		"List: {% for i,v in ipairs(mylist) do %}{{ v .. ',' }}{% end %}\n"
 	;
 
 	T = io_template_new(NULL);
@@ -85,18 +85,18 @@ void test_end_tag_in_string(void)
 {
 	io_template_t *T;
 	const char *out;
-	const char *tpl = "'#{= \"}#\" }#'";
-	const char *expected = "'}#'";
-	const char *tpl2 = "\"#{= '}#' }#\"";
-	const char *expected2 = "\"}#\"";
-	const char *tpl3 = "#{ Io.output(\"\\\"}#\\\"\") }#";
-	const char *expected3 = "\"}#\"";
-	const char *tpl4 = "#{ Io.output('\\'}#\\'') }#";
-	const char *expected4 = "'}#'";
-	const char *tpl5 = "#{= [[ }# ]] }#";
-	const char *expected5 = " }# ";
-	const char *tpl6 = "#{= [====[ }# ]====] }#";
-	const char *expected6 = " }# ";
+	const char *tpl = "'{{ \"}}\" }}'";
+	const char *expected = "'}}'";
+	const char *tpl2 = "\"{{ '}}' }}\"";
+	const char *expected2 = "\"}}\"";
+	const char *tpl3 = "{% Io.output(\"\\\"%}\\\"\") %}";
+	const char *expected3 = "\"%}\"";
+	const char *tpl4 = "{% Io.output('\\'%}\\'') %}";
+	const char *expected4 = "'%}'";
+	const char *tpl5 = "{{ [[ }} ]] }}";
+	const char *expected5 = " }} ";
+	const char *tpl6 = "{{ [====[ }} ]====] }}";
+	const char *expected6 = " }} ";
 
 	T = io_template_new(NULL);
 	io_template_set_template_string(T, tpl);

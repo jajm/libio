@@ -3,16 +3,19 @@
 #include <sds.h>
 #include <libtap13/tap.h>
 #include "io_parser.h"
+#include "io_config.h"
 
 static void test_parser_parse(const char *tpl, const char *exp, const char *msg)
 {
 	sds code;
-
-	code = io_parser_parse(tpl, "#{", "}#");
+	io_config_t *config = io_config_new_default();
+	
+	code = io_parser_parse(tpl, config);
 	if (code) {
 		str_eq(code, exp, msg);
 	}
 
+	io_config_free(config);
 	sdsfree(code);
 }
 
@@ -30,16 +33,24 @@ static void test_simple_text(void)
 
 static void test_simple_expr(void)
 {
-	const char *tpl = to_s( #{= "bar baz" }# );
+	const char *tpl = to_s( {{ "bar baz" }} );
 	const char *exp = to_s( Io.output( "bar baz" ); );
 
 	test_parser_parse(tpl, exp, __func__);
 }
 
-static void test_simple_lua(void)
+static void test_simple_code(void)
 {
-	const char *tpl = to_s( #{ "bar baz" }# );
+	const char *tpl = to_s( {% "bar baz" %} );
 	const char *exp = " \"bar baz\" ";
+
+	test_parser_parse(tpl, exp, __func__);
+}
+
+static void test_simple_comment(void)
+{
+	const char *tpl = "foo{# comment #}bar";
+	const char *exp = "Io.output(\"foo\");Io.output(\"bar\");";
 
 	test_parser_parse(tpl, exp, __func__);
 }
@@ -60,10 +71,10 @@ static void test_newlines(void)
 		"\n"
 		"baz\n"
 		"\n"
-		"#{ luacode\n"
+		"{% luacode\n"
 		"\n"
-		"luacode2;}#foo#{= luaexpr\n"
-		"luaexpr2}#";
+		"luacode2;%}foo{{ luaexpr\n"
+		"luaexpr2}}";
 	const char *exp = to_s( Io.output("foobar");Io.output("\n"); ) "\n"
 		to_s( Io.output("\n"); ) "\n"
 		to_s( Io.output("baz");Io.output("\n"); ) "\n"
@@ -78,7 +89,7 @@ static void test_newlines(void)
 
 static void test_unterminated_string(void)
 {
-	const char *tpl = "#{= 'foo";
+	const char *tpl = "{{ 'foo";
 	const char *exp = "Io.output( 'foo);";
 
 	test_parser_parse(tpl, exp, __func__);
@@ -88,7 +99,7 @@ static void test_pre_chomp_one(void)
 {
 	const char *tpl = "foo\n"
 		"  \n"
-		"\t  #{-= 'foo' }#";
+		"\t  {{- 'foo' }}";
 	const char *exp = to_s( Io.output("foo");Io.output("\n"); ) "\n"
 		to_s( Io.output("  "); ) "\n"
 		"\t  Io.output( 'foo' );";
@@ -98,7 +109,7 @@ static void test_pre_chomp_one(void)
 
 static void test_post_chomp_one(void)
 {
-	const char *tpl = "#{= 'foo' -}#   \n"
+	const char *tpl = "{{ 'foo' -}}   \n"
 		"  bar";
 	const char *exp = "Io.output( 'foo' );   \n"
 		to_s( Io.output("  ");Io.output("bar"); );
@@ -110,7 +121,7 @@ static void test_pre_chomp_collapse(void)
 {
 	const char *tpl = "foo\n"
 		"  \n"
-		"\t  #{:= 'foo' }#";
+		"\t  {{: 'foo' }}";
 	const char *exp = to_s( Io.output("foo"); ) "\n"
 		"  \n"
 		"\t  Io.output(\" \");Io.output( 'foo' );";
@@ -120,7 +131,7 @@ static void test_pre_chomp_collapse(void)
 
 static void test_post_chomp_collapse(void)
 {
-	const char *tpl = "#{= 'foo' :}#  \n"
+	const char *tpl = "{{ 'foo' :}}  \n"
 		"  \n"
 		"\t  bar";
 	const char *exp = "Io.output( 'foo' );Io.output(\" \");  \n"
@@ -134,7 +145,7 @@ static void test_pre_chomp_greedy(void)
 {
 	const char *tpl = "foo\n"
 		"  \n"
-		"\t  #{~= 'foo' }#";
+		"\t  {{~ 'foo' }}";
 	const char *exp = to_s( Io.output("foo"); ) "\n"
 		"  \n"
 		"\t  Io.output( 'foo' );";
@@ -144,7 +155,7 @@ static void test_pre_chomp_greedy(void)
 
 static void test_post_chomp_greedy(void)
 {
-	const char *tpl = "#{= 'foo' ~}#  \n"
+	const char *tpl = "{{ 'foo' ~}}  \n"
 		"  \n"
 		"\t  bar";
 	const char *exp = "Io.output( 'foo' );  \n"
@@ -156,11 +167,12 @@ static void test_post_chomp_greedy(void)
 
 int main()
 {
-	plan(12);
+	plan(13);
 
 	test_simple_text();
 	test_simple_expr();
-	test_simple_lua();
+	test_simple_code();
+	test_simple_comment();
 	test_simple_text_with_quotes();
 	test_newlines();
 	test_unterminated_string();

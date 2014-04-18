@@ -1,1 +1,1 @@
-Test inclusion #{= name:upper() }#
+Test inclusion {{ name:upper() }}

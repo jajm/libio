@@ -3,16 +3,17 @@ libio is a C library that provides a Lua templating system.
 This means it can parse template files with embedded Lua code.
 For example, say you have a file hello.tpl:
 
-    Hello, #{= string.lower(name) }#
+    Hello, {{ string.lower(name) }}
 
 In order to parse this file and produce the wanted output, you have to write
 this little C program:
 
-    #include <libio/template.h>
+    #include <libio/io_template.h>
     #include <embody/embody.h>
     #include <sds.h>
     int main() {
-        io_template_t *T = io_template_new_from_file("hello.tpl");
+        io_template_t *T = io_template_new(NULL);
+        io_template_set_template_file("hello.tpl");
         io_template_param(T, "name", emb_new("sds", sdsnew("WORLD")));
         puts(io_template_render(T));
         io_template_free(T);

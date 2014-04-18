@@ -21,26 +21,24 @@
 #define libio_parser_h_included
 
 #include <sds.h>
+#include "io_config.h"
 
 sds
 io_parser_parse(
 	const char *template,
-	const char *start_tag,
-	const char *end_tag
+	io_config_t *config
 );
 
 sds
 io_parser_parse_filep(
 	FILE *filep,
-	const char *start_tag,
-	const char *end_tag
+	io_config_t *config
 );
 
 sds
 io_parser_parse_file(
 	const char *filename,
-	const char *start_tag,
-	const char *end_tag
+	io_config_t *config
 );
 
 #endif /* ! libio_parser_h_included */

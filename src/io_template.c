@@ -43,7 +43,7 @@ void io_initialize(void)
 {
 	if (!io_initialized) {
 		io_emb_initialize();
-		io_default_config = io_config_new();
+		io_default_config = io_config_new_default();
 
 		io_initialized = 1;
 	}
@@ -92,7 +92,7 @@ int io_template_set_template_string(io_template_t *T, const char *tpl)
 	sdsfree(T->name);
 	sdsfree(T->code);
 	T->name = sdsnew("(Io:main)");
-	T->code = io_parser_parse(tpl, T->config->start_tag, T->config->end_tag);
+	T->code = io_parser_parse(tpl, T->config);
 
 	return 0;
 }
@@ -106,8 +106,7 @@ int io_template_set_template_file(io_template_t *T, const char *filename)
 	sdsfree(T->name);
 	sdsfree(T->code);
 	T->name = sdsnew(filename);
-	T->code = io_parser_parse_file(filename, T->config->start_tag,
-		T->config->end_tag);
+	T->code = io_parser_parse_file(filename, T->config);
 
 	return 0;
 }

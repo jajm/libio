@@ -24,13 +24,28 @@
 #include <libgends/slist.h>
 
 typedef struct {
-	sds start_tag;
-	sds end_tag;
+	sds code_start_tag;
+	sds code_end_tag;
+	sds expr_start_tag;
+	sds expr_end_tag;
+	sds comm_start_tag;
+	sds comm_end_tag;
+
 	gds_slist_t *directories;
 } io_config_t;
 
 io_config_t *
-io_config_new(void);
+io_config_new(
+	const char *code_start_tag,
+	const char *code_end_tag,
+	const char *expr_start_tag,
+	const char *expr_end_tag,
+	const char *comm_start_tag,
+	const char *comm_end_tag
+);
+
+io_config_t *
+io_config_new_default(void);
 
 void
 io_config_free(

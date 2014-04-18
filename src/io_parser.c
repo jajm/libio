@@ -23,6 +23,7 @@
 #include <string.h>
 #include <sds.h>
 #include <libgends/inline/dlist.h>
+#include "io_config.h"
 
 typedef enum {
 	IO_CHOMP_NONE = 0,
@@ -36,8 +37,9 @@ typedef enum {
 	IO_TOKEN_TYPE_TEXT,
 	IO_TOKEN_TYPE_WHITESPACE,
 	IO_TOKEN_TYPE_NEWLINE,
-	IO_TOKEN_TYPE_LUA,
-	IO_TOKEN_TYPE_LUA_EXPR
+	IO_TOKEN_TYPE_CODE,
+	IO_TOKEN_TYPE_EXPR,
+	IO_TOKEN_TYPE_COMMENT
 } io_token_type_t;
 
 typedef struct {
@@ -49,10 +51,7 @@ typedef struct {
 typedef struct {
 	io_token_t *tokens_head;
 	io_token_t *tokens_tail;
-	const char *start_tag;
-	const char *end_tag;
-	size_t start_tag_len;
-	size_t end_tag_len;
+	io_config_t *config;
 } io_parser_context_t;
 
 static io_token_t * io_token_new(io_token_type_t type, sds value)
@@ -148,16 +147,13 @@ static const char * io_parser_parse_string_multiline(const char *ptr,
 	return ptr;
 }
 
-static const char * io_parser_parse_lua(const char *ptr,
-	io_parser_context_t *context)
+static const char * io_parser_parse_lua(const char *ptr, sds end_tag,
+	io_token_type_t type, io_parser_context_t *context)
 {
-	const char *end_tag = context->end_tag;
-	size_t end_tag_len = context->end_tag_len;
+	size_t end_tag_len = sdslen(end_tag);
 	const char *tmp;
-	io_token_type_t type = IO_TOKEN_TYPE_LUA;
 	sds value;
 
-	ptr += context->start_tag_len;
 	tmp = ptr;
 
 	while (ptr && *ptr) {
@@ -194,6 +190,30 @@ static const char * io_parser_parse_lua(const char *ptr,
 	return ptr;
 }
 
+static const char * io_parser_parse_code(const char *ptr,
+	io_parser_context_t *context)
+{
+	ptr += sdslen(context->config->code_start_tag);
+	return io_parser_parse_lua(ptr, context->config->code_end_tag,
+		IO_TOKEN_TYPE_CODE, context);
+}
+
+static const char * io_parser_parse_expr(const char *ptr,
+	io_parser_context_t *context)
+{
+	ptr += sdslen(context->config->expr_start_tag);
+	return io_parser_parse_lua(ptr, context->config->expr_end_tag,
+		IO_TOKEN_TYPE_EXPR, context);
+}
+
+static const char * io_parser_parse_comment(const char *ptr,
+	io_parser_context_t *context)
+{
+	ptr += sdslen(context->config->comm_start_tag);
+	return io_parser_parse_lua(ptr, context->config->comm_end_tag,
+		IO_TOKEN_TYPE_COMMENT, context);
+}
+
 static const char * io_parser_parse_whitespace(const char *ptr,
 	io_parser_context_t *context)
 {
@@ -212,28 +232,55 @@ static const char * io_parser_parse_whitespace(const char *ptr,
 static const char * io_parser_parse_text(const char *ptr,
 	io_parser_context_t *context)
 {
-	const char *start_tag = context->start_tag;
-	size_t start_tag_len = context->start_tag_len;
+	sds code_start_tag = context->config->code_start_tag;
+	size_t code_start_tag_len = sdslen(code_start_tag);
+	sds expr_start_tag = context->config->expr_start_tag;
+	size_t expr_start_tag_len = sdslen(expr_start_tag);
+	sds comm_start_tag = context->config->comm_start_tag;
+	size_t comm_start_tag_len = sdslen(comm_start_tag);
 	const char *tmp;
 	sds value;
 
+	tmp = ptr;
+	while (*ptr && *ptr != '\n' && *ptr != ' ' && *ptr != '\t'
+	&& strncmp(ptr, code_start_tag, code_start_tag_len)
+	&& strncmp(ptr, expr_start_tag, expr_start_tag_len)
+	&& strncmp(ptr, comm_start_tag, comm_start_tag_len))
+	{
+		ptr++;
+	}
+
+	value = sdsnewlen(tmp, ptr - tmp);
+	io_token_list_push(context, io_token_new(IO_TOKEN_TYPE_TEXT, value));
+
+	return ptr - 1;
+}
+
+static const char * io_parser_parse_main(const char *ptr,
+	io_parser_context_t *context)
+{
+	sds code_start_tag = context->config->code_start_tag;
+	size_t code_start_tag_len = sdslen(code_start_tag);
+	sds expr_start_tag = context->config->expr_start_tag;
+	size_t expr_start_tag_len = sdslen(expr_start_tag);
+	sds comm_start_tag = context->config->comm_start_tag;
+	size_t comm_start_tag_len = sdslen(comm_start_tag);
+
 	while (ptr && *ptr) {
 		if (*ptr == '\n') {
-			io_token_list_push(context,
-				io_token_new(IO_TOKEN_TYPE_NEWLINE, sdsnew("\n")));
+			io_token_t *token = io_token_new(IO_TOKEN_TYPE_NEWLINE,
+				sdsnew("\n"));
+			io_token_list_push(context, token);
 		} else if (*ptr == ' ' || *ptr == '\t') {
 			ptr = io_parser_parse_whitespace(ptr, context);
-		} else if (!strncmp(ptr, start_tag, start_tag_len)) {
-			ptr = io_parser_parse_lua(ptr, context);
+		} else if (!strncmp(ptr, comm_start_tag, comm_start_tag_len)) {
+			ptr = io_parser_parse_comment(ptr, context);
+		} else if (!strncmp(ptr, expr_start_tag, expr_start_tag_len)) {
+			ptr = io_parser_parse_expr(ptr, context);
+		} else if (!strncmp(ptr, code_start_tag, code_start_tag_len)) {
+			ptr = io_parser_parse_code(ptr, context);
 		} else {
-			tmp = ptr;
-			while (*ptr && *ptr != '\n' && *ptr != ' ' && *ptr != '\t' && strncmp(ptr, start_tag, start_tag_len)) {
-				ptr++;
-			}
-			value = sdsnewlen(tmp, ptr - tmp);
-			io_token_list_push(context,
-				io_token_new(IO_TOKEN_TYPE_TEXT, value));
-			ptr--;
+			ptr = io_parser_parse_text(ptr, context);
 		}
 		if (ptr && *ptr) ptr++;
 	}
@@ -341,10 +388,6 @@ static void io_parser_process_lua_token(io_parser_context_t *context,
 	io_token_t *newtoken;
 
 	io_parser_lua_token_set_chomps(token, &pre_chomp, &post_chomp);
-	if (token->value[0] == '=') {
-		token->type = IO_TOKEN_TYPE_LUA_EXPR;
-		sdsrange(token->value, 1, -1);
-	}
 	io_parser_lua_token_pre_chomp(token, pre_chomp);
 	io_parser_lua_token_post_chomp(token, post_chomp);
 
@@ -372,14 +415,17 @@ static void io_parser_process_lua_tokens(io_parser_context_t *context)
 	it = &(context->tokens_head->dlist);
 	while (it) {
 		token = container_of(it, io_token_t, dlist);
-		if (token->type == IO_TOKEN_TYPE_LUA) {
+		if (token->type == IO_TOKEN_TYPE_CODE
+		|| token->type == IO_TOKEN_TYPE_EXPR
+		|| token->type == IO_TOKEN_TYPE_COMMENT)
+		{
 			io_parser_process_lua_token(context, token);
 		}
 		it = it->next;
 	}
 }
 
-sds io_parser_parse(const char *template, const char *start_tag, const char *end_tag)
+sds io_parser_parse(const char *template, io_config_t *config)
 {
 	const char *ptr = template;
 	io_token_t *token;
@@ -389,12 +435,9 @@ sds io_parser_parse(const char *template, const char *start_tag, const char *end
 	io_parser_context_t context;
 	context.tokens_head = NULL;
 	context.tokens_tail = NULL;
-	context.start_tag = start_tag;
-	context.end_tag = end_tag;
-	context.start_tag_len = strlen(start_tag);
-	context.end_tag_len = strlen(end_tag);
+	context.config = config;
 
-	io_parser_parse_text(ptr, &context);
+	io_parser_parse_main(ptr, &context);
 
 	io_parser_process_lua_tokens(&context);
 
@@ -404,7 +447,7 @@ sds io_parser_parse(const char *template, const char *start_tag, const char *end
 		token = container_of(it, io_token_t, dlist);
 		switch (token->type) {
 			case IO_TOKEN_TYPE_PLAIN:
-			case IO_TOKEN_TYPE_LUA:
+			case IO_TOKEN_TYPE_CODE:
 				buf = sdscat(buf, token->value);
 				break;
 			case IO_TOKEN_TYPE_TEXT:
@@ -420,10 +463,13 @@ sds io_parser_parse(const char *template, const char *start_tag, const char *end
 			case IO_TOKEN_TYPE_NEWLINE:
 				buf = sdscat(buf, "Io.output(\"\\n\");\n");
 				break;
-			case IO_TOKEN_TYPE_LUA_EXPR:
+			case IO_TOKEN_TYPE_EXPR:
 				buf = sdscat(buf, "Io.output(");
 				buf = sdscat(buf, token->value);
 				buf = sdscat(buf, ");");
+				break;
+			case IO_TOKEN_TYPE_COMMENT:
+				/* Do nothing */
 				break;
 		}
 		it = it->next;
@@ -434,7 +480,7 @@ sds io_parser_parse(const char *template, const char *start_tag, const char *end
 	return buf;
 }
 
-sds io_parser_parse_filep(FILE *filep, const char *start_tag, const char *end_tag)
+sds io_parser_parse_filep(FILE *filep, io_config_t *config)
 {
 	char buf[1024];
 	sds out;
@@ -453,21 +499,20 @@ sds io_parser_parse_filep(FILE *filep, const char *start_tag, const char *end_ta
 		}
 	}
 
-	out = io_parser_parse(tpl, start_tag, end_tag);
+	out = io_parser_parse(tpl, config);
 	sdsfree(tpl);
 
 	return out;
 }
 
-sds io_parser_parse_file(const char *filename, const char *start_tag,
-	const char *end_tag)
+sds io_parser_parse_file(const char *filename, io_config_t *config)
 {
 	FILE *fp;
 	sds out = NULL;
 
 	fp = fopen(filename, "r");
 	if (fp != NULL) {
-		out = io_parser_parse_filep(fp, start_tag, end_tag);
+		out = io_parser_parse_filep(fp, config);
 		fclose(fp);
 	}
 
